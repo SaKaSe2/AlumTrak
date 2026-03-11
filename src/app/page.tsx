@@ -369,8 +369,6 @@ export default function Home() {
 
   return (
     <div id="app-view">
-      <div className="grain"></div>
-      <div className="grid-bg"></div>
       <div className="app-shell">
         <aside className="sidebar">
           <div className="sidebar-header">
