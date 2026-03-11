@@ -50,12 +50,12 @@ body {
 .mono { font-family: 'JetBrains Mono', monospace; }
 
 /* NAV (Landing) */
-nav {
+.landing-nav {
   position: fixed; top: 0; width: 100%; z-index: 100;
   padding: 24px 0; transition: all 0.3s ease;
-  backdrop-filter: blur(10px); border-bottom: 1px solid transparent;
+  border-bottom: 1px solid transparent;
 }
-nav.scrolled { background: var(--bg-surface-glass); border-bottom-color: var(--border); padding: 16px 0; }
+.landing-nav.scrolled { background: var(--bg-surface); border-bottom-color: var(--border); padding: 16px 0; }
 .nav-inner { max-width: 1200px; margin: 0 auto; padding: 0 5vw; display: flex; justify-content: space-between; align-items: center; }
 .logo { font-size: 20px; font-weight: 700; color: var(--text-main); text-decoration: none; display: flex; align-items: center; gap: 8px; }
 .logo span { color: var(--accent); }

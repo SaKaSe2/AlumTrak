@@ -265,7 +265,7 @@ export default function Home() {
       <div id="landing-view">
         <div className="grain"></div>
         <div className="grid-bg"></div>
-        <nav id="navbar">
+        <div className="landing-nav" id="navbar">
           <div className="container nav-inner">
             <a href="#" className="logo">Alumni<span>Trace</span></a>
             <div>
@@ -274,7 +274,7 @@ export default function Home() {
               </button>
             </div>
           </div>
-        </nav>
+        </div>
 
         <main>
           <section className="hero container">
