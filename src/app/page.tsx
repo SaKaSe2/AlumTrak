@@ -903,6 +903,9 @@ export default function Home() {
                       <option value={50}>Batasi: 50 Data</option>
                       <option value={100}>Batasi: 100 Data</option>
                       <option value={500}>Batasi: 500 Data</option>
+                      <option value={1000}>Batasi: 1,000 Data</option>
+                      <option value={5000}>Batasi: 5,000 Data</option>
+                      <option value={10000}>Batasi: 10,000 Data</option>
                     </select>
                   </div>
                   <div style={{overflowX: 'auto'}}>
@@ -962,6 +965,9 @@ export default function Home() {
                               <option value={50}>Maks. 50 Data</option>
                               <option value={100}>Maks. 100 Data</option>
                               <option value={500}>Maks. 500 Data</option>
+                              <option value={1000}>Maks. 1,000 Data</option>
+                              <option value={5000}>Maks. 5,000 Data</option>
+                              <option value={10000}>Maks. 10,000 Data</option>
                             </select>
                           </div>
                           <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
