@@ -568,6 +568,9 @@ export default function Home() {
           if (linkedinData.physicalAddress) {
             a.alamatBekerja = linkedinData.physicalAddress;
           }
+          if (linkedinData.physicalWebsite) {
+            a.sosmed_tempatBekerja = linkedinData.physicalWebsite;
+          }
         }
 
         if(tracerUmmData) {
@@ -583,6 +586,7 @@ export default function Home() {
           a.email = '';
           a.tempatBekerja = '';
           a.alamatBekerja = '';
+          a.sosmed_tempatBekerja = '';
           a.posisi = '';
           a.noHp = '';
           a.sosmed_linkedin = '';
@@ -633,6 +637,7 @@ export default function Home() {
                      posisi: a.posisi,
                      tempat_bekerja: a.tempatBekerja,
                      alamat_bekerja: a.alamatBekerja,
+                     sosmed_tempat_bekerja: a.sosmed_tempatBekerja,
                      updated_at: new Date().toISOString()
                  }).eq('id', a.id);
              } catch(err) {

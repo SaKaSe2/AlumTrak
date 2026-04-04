@@ -352,6 +352,7 @@ app.get('/api/linkedin', async (req, res) => {
 
         const best = validCandidates[0];
         let physicalAddress = null;
+        let physicalWebsite = null;
 
         if (best.company && !best.company.toLowerCase().includes('hidden')) {
             try {
@@ -369,6 +370,7 @@ app.get('/api/linkedin', async (req, res) => {
                     const placeData = await reqPlaces.json();
                     if (placeData.places && placeData.places.length > 0) {
                         physicalAddress = placeData.places[0].address;
+                        physicalWebsite = placeData.places[0].website || null;
                         console.log(`[Google Places] Alamat Fisik Ditemukan: ${physicalAddress}`);
                     }
                 }
@@ -386,6 +388,7 @@ app.get('/api/linkedin', async (req, res) => {
                 company: best.company,
                 location: best.location,
                 physicalAddress: physicalAddress,
+                physicalWebsite: physicalWebsite,
                 matchScore: best.matchScore,
                 hasUniHint: best.hasUniHint,
                 totalChecked: candidates.length
