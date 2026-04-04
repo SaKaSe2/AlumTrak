@@ -1362,7 +1362,28 @@ export default function Home() {
               <div style={{marginTop:'30px', paddingTop:'20px', borderTop:'1px solid var(--border)'}}>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px'}}>
                   <label>MANUAL DATA COLLECTION (TUGAS DP 4)</label>
-                  <button className="btn btn-sm btn-outline" onClick={() => showToast('Disimpan lokal.', 'ok')}>Simpan Perubahan</button>
+                  <button className="btn btn-sm btn-outline" onClick={async () => {
+                    try {
+                      await supabase.from('alumni').update({
+                        email: detailForm.email,
+                        no_hp: detailForm.noHp,
+                        sosmed_linkedin: detailForm.sosmed_linkedin,
+                        sosmed_ig: detailForm.sosmed_ig,
+                        sosmed_fb: detailForm.sosmed_fb,
+                        sosmed_tiktok: detailForm.sosmed_tiktok,
+                        tempat_bekerja: detailForm.tempatBekerja,
+                        sosmed_tempat_bekerja: detailForm.sosmed_tempatBekerja,
+                        alamat_bekerja: detailForm.alamatBekerja,
+                        posisi: detailForm.posisi,
+                        jenis_pekerjaan: detailForm.jenisPekerjaan
+                      }).eq('id', detailForm.id);
+                      setAlumni(prev => prev.map(a => a.id === detailForm.id ? detailForm : a));
+                      showToast('Perubahan berhasil disimpan ke database', 'ok');
+                    } catch(e) {
+                      console.error(e);
+                      showToast('Gagal menyimpan perubahan', 'warn');
+                    }
+                  }}>Simpan Perubahan</button>
                 </div>
                 
                 <div className="form-grid" style={{gridTemplateColumns:'1fr 1fr', gap:'16px'}}>
