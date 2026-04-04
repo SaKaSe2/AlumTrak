@@ -912,13 +912,12 @@ export default function Home() {
                     <div className="card-body">
                       <div className="mb-6">
                         <label>Target Set (Langkah 3)</label>
-                        <div style={{display:'flex', flexDirection:'column', gap:'12px', marginTop:'12px', marginBottom: '24px', background:'rgba(255,255,255,0.02)', padding:'12px', borderRadius:'6px', border:'1px solid rgba(255,255,255,0.05)'}}>
-                          <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
-                            <input type="checkbox" checked={true} readOnly style={{accentColor:'var(--accent)'}} />
-                            <span style={{fontSize:'13px', width:'130px', color:'var(--text-muted)'}}>Batasi Kuota:</span>
+                        <div style={{display:'flex', flexDirection:'column', gap:'12px', marginTop:'12px', marginBottom: '24px', background:'rgba(255,255,255,0.02)', padding:'16px', borderRadius:'6px', border:'1px solid rgba(255,255,255,0.05)'}}>
+                          <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+                            <input type="checkbox" checked={true} readOnly style={{accentColor:'var(--accent)', width:'16px', height:'16px', flexShrink:0}} />
+                            <span style={{fontSize:'13px', minWidth:'110px', color:'var(--text-muted)'}}>Batasi Kuota:</span>
                             <select 
-                              className="input flex-1" 
-                              style={{padding:'4px 8px', fontSize:'13px', height:'auto', minHeight:'28px'}}
+                              style={{padding:'8px 12px', fontSize:'13px', background:'rgba(0,0,0,0.3)', width: '100%'}}
                               value={dataLimit}
                               onChange={(e)=>setDataLimit(Number(e.target.value))}
                             >
@@ -928,15 +927,15 @@ export default function Home() {
                               <option value={500}>Maks. 500 Data</option>
                             </select>
                           </div>
-                          <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
-                            <input type="checkbox" checked={useNim} onChange={(e)=>{setUseNim(e.target.checked); if(!e.target.checked) setSearchNim('');}} style={{accentColor:'var(--accent)'}} />
-                            <span style={{fontSize:'13px', width:'130px', color: useNim ? 'var(--text)' : 'var(--text-muted)'}}>Spesifik NIM:</span>
-                            <input type="text" className="input flex-1" placeholder="Misal: 20151..." value={searchNim} onChange={(e)=>setSearchNim(e.target.value)} disabled={!useNim} style={{padding:'4px 8px', fontSize:'13px', height:'28px', opacity: useNim?1:0.4}} />
+                          <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+                            <input type="checkbox" checked={useNim} onChange={(e)=>{setUseNim(e.target.checked); if(!e.target.checked) setSearchNim('');}} style={{accentColor:'var(--accent)', width:'16px', height:'16px', flexShrink:0}} />
+                            <span style={{fontSize:'13px', minWidth:'110px', color: useNim ? 'var(--text)' : 'var(--text-muted)'}}>Spesifik NIM:</span>
+                            <input type="text" placeholder="Misal: 20151..." value={searchNim} onChange={(e)=>setSearchNim(e.target.value)} disabled={!useNim} style={{padding:'8px 12px', fontSize:'13px', width:'100%', background: useNim ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.1)', opacity: useNim?1:0.5, border: '1px solid var(--border)'}} />
                           </div>
-                          <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
-                            <input type="checkbox" checked={useTahun} onChange={(e)=>{setUseTahun(e.target.checked); if(!e.target.checked) setSearchTahun('');}} style={{accentColor:'var(--accent)'}} />
-                            <span style={{fontSize:'13px', width:'130px', color: useTahun ? 'var(--text)' : 'var(--text-muted)'}}>Tahun Masuk:</span>
-                            <input type="text" className="input flex-1" placeholder="Misal: 2015" value={searchTahun} onChange={(e)=>setSearchTahun(e.target.value)} disabled={!useTahun} style={{padding:'4px 8px', fontSize:'13px', height:'28px', opacity: useTahun?1:0.4}} />
+                          <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+                            <input type="checkbox" checked={useTahun} onChange={(e)=>{setUseTahun(e.target.checked); if(!e.target.checked) setSearchTahun('');}} style={{accentColor:'var(--accent)', width:'16px', height:'16px', flexShrink:0}} />
+                            <span style={{fontSize:'13px', minWidth:'110px', color: useTahun ? 'var(--text)' : 'var(--text-muted)'}}>Tahun Masuk:</span>
+                            <input type="text" placeholder="Misal: 2015" value={searchTahun} onChange={(e)=>setSearchTahun(e.target.value)} disabled={!useTahun} style={{padding:'8px 12px', fontSize:'13px', width:'100%', background: useTahun ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.1)', opacity: useTahun?1:0.5, border: '1px solid var(--border)'}} />
                           </div>
                         </div>
                       </div>
