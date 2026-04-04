@@ -855,13 +855,34 @@ export default function Home() {
                   <div className="card">
                     <div className="card-header">
                       <span className="card-title">ISO 25010 Quick Status</span>
-                      <button className="btn btn-sm btn-outline" style={{borderColor:'var(--red)', color:'var(--red)'}} onClick={() => {
-                        if(confirm('Hapus seluruh data (Alumni & Jejak)?')) {
-                          setAlumni([]); setEvidence([]);
-                          localStorage.removeItem('alumni_data'); localStorage.removeItem('evidence_data');
-                          showToast('Semua database dikosongkan', 'warn');
+                      <button className="btn btn-sm btn-outline" style={{borderColor:'var(--red)', color:'var(--red)'}} onClick={async () => {
+                        if(confirm('Hapus seluruh Riwayat Lacak (Status akan kembali menjadi Belum Dilacak)?')) {
+                          try {
+                            setAlumni([]); setEvidence([]);
+                            showToast('Sedang mereset history di database...', 'warn');
+                            const { error } = await supabase.from('alumni').update({
+                              status: 'Belum Dilacak',
+                              confidence: 0,
+                              jabatan: null,
+                              instansi: null,
+                              lokasi: null,
+                              sources: [],
+                              posisi: null,
+                              tempat_bekerja: null,
+                              alamat_bekerja: null,
+                              jenis_pekerjaan: null,
+                              updated_at: null
+                            }).neq('status', 'Belum Dilacak');
+                            if (error) throw error;
+                            localStorage.removeItem('evidence_data');
+                            fetchAlumniFromSupabase();
+                            showToast('History Berhasil Direset!', 'ok');
+                          } catch (err) {
+                            console.error(err);
+                            showToast('Gagal mereset history', 'warn');
+                          }
                         }
-                      }}>Kosongkan Database</button>
+                      }}>Reset History Lacak</button>
                     </div>
                     <div className="card-body">
                       <p className="mono text-sm mb-6">Sistem telah memenuhi parameter kualitas modul 2.</p>
