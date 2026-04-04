@@ -86,7 +86,7 @@ export default function Home() {
       if (tahun) {
         query = query.ilike('tahun_masuk', `%${tahun}%`);
       }
-      if (filter) {
+      if (filter && !nim) {
         query = query.eq('status', filter);
       }
       
@@ -761,10 +761,10 @@ export default function Home() {
   }
 
   // --- APP VIEW ---
-  const pendingCount = alumni.filter(a => !a.optout && (filterAlumni ? a.status === filterAlumni : a.status !== 'Teridentifikasi')).length;
+  const pendingCount = alumni.filter(a => !a.optout && (searchNim ? true : (filterAlumni ? a.status === filterAlumni : a.status !== 'Teridentifikasi'))).length;
   const filteredAlumni = alumni.filter(a => 
     (!searchAlumni || a.nama.toLowerCase().includes(searchAlumni.toLowerCase()) || a.nim.includes(searchAlumni)) &&
-    (!filterAlumni || a.status === filterAlumni)
+    (searchNim ? true : (!filterAlumni || a.status === filterAlumni))
   );
   
   const detailA = detailId ? alumni.find(a => a.id === detailId) : null;
