@@ -453,20 +453,32 @@ export default function Home() {
       }
 
       // Sumber 2: LinkedIn Bot (Puppeteer Stealth via Backend Render)
-      try {
-        addLogContext(`  -> [BOT] Memeriksa beberapa hasil LinkedIn untuk ${a.nama}...`, 'c-sys');
-        const liRes = await fetch(`/api/osint-bot?target=${encodeURIComponent(a.nama)}`);
-        const liJson = await liRes.json();
-        if(liJson.success && liJson.data) {
-          linkedinData = liJson.data;
-          addLogContext(`  [OK] LinkedIn Bot HIT: ${linkedinData.headline || linkedinData.name} (${linkedinData.matchScore}% Match${linkedinData.hasUniHint ? ' + UMM Hint' : ''})`, 'c-ok');
-        } else if (liJson.data && liJson.data.totalChecked > 0) {
-          addLogContext(`  [WARN] LinkedIn Bot: Diperiksa ${liJson.data.totalChecked} profil, tidak ada yang cocok sempurna. Membutuhkan verifikasi manual.`, 'c-warn');
-        } else {
-          addLogContext(`  [WARN] LinkedIn Bot: ${liJson.error || 'Gagal memeriksa profil'}`, 'c-warn');
+      let liAttempts = 0;
+      let liSuccess = false;
+      while (liAttempts < 3 && !liSuccess) {
+        liAttempts++;
+        try {
+          if (liAttempts > 1) {
+            addLogContext(`  -> [BOT] Retry ${liAttempts-1}: Memeriksa ulang LinkedIn untuk ${a.nama}...`, 'c-sys');
+            await new Promise(r => setTimeout(r, 1000));
+          } else {
+            addLogContext(`  -> [BOT] Memeriksa beberapa hasil LinkedIn untuk ${a.nama}...`, 'c-sys');
+          }
+          const liRes = await fetch(`/api/osint-bot?target=${encodeURIComponent(a.nama)}`);
+          const liJson = await liRes.json();
+          if(liJson.success && liJson.data) {
+            linkedinData = liJson.data;
+            addLogContext(`  [OK] LinkedIn Bot HIT: ${linkedinData.headline || linkedinData.name} (${linkedinData.matchScore}% Match${linkedinData.hasUniHint ? ' + UMM Hint' : ''})`, 'c-ok');
+            liSuccess = true;
+          } else if (liJson.data && liJson.data.totalChecked > 0) {
+            addLogContext(`  [WARN] LinkedIn Bot: Diperiksa ${liJson.data.totalChecked} profil, tidak ada yang cocok sempurna (Validasi Kampus Gagal).`, 'c-warn');
+            liSuccess = true; // Gagal terkonfirmasi karena validasi kampus, tak perlu retry berlebihan
+          } else {
+            addLogContext(`  [WARN] LinkedIn Bot: ${liJson.error || 'Profil gagal diekstrak / JSON Error'}`, 'c-warn');
+          }
+        } catch (err) {
+          addLogContext(`  [WARN] LinkedIn Bot timeout/error untuk ${a.nama}`, 'c-warn');
         }
-      } catch {
-        addLogContext(`  [WARN] LinkedIn Bot timeout/error untuk ${a.nama}`, 'c-warn');
       }
 
       // Sumber 3: internal Tracer Study UMM
@@ -605,7 +617,18 @@ export default function Home() {
         if (a.confidence > 0) { // Hanya update jika dilacak
              try {
                  await supabase.from('alumni').update({
-                     status: a.status, confidence: a.confidence, jabatan: a.jabatan, instansi: a.instansi, lokasi: a.lokasi, sources: a.sources, updated_at: new Date().toISOString()
+                     status: a.status, 
+                     confidence: a.confidence, 
+                     jabatan: a.jabatan, 
+                     instansi: a.instansi, 
+                     lokasi: a.lokasi, 
+                     sources: a.sources, 
+                     sosmed_linkedin: a.sosmed_linkedin,
+                     email: a.email,
+                     no_hp: a.noHp,
+                     posisi: a.posisi,
+                     tempat_bekerja: a.tempatBekerja,
+                     updated_at: new Date().toISOString()
                  }).eq('id', a.id);
              } catch(err) {
                  console.error(err);

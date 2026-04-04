@@ -265,7 +265,7 @@ app.get('/api/linkedin', async (req, res) => {
             });
         }
 
-        const query = `site:linkedin.com/in "${target}"`;
+        const query = `site:linkedin.com/in "${target}" ("Muhammadiyah" OR "UMM")`;
 
         try {
             console.log(`[LinkedIn] HTTP Fetching Serper API: "${query}"`);
@@ -300,19 +300,23 @@ app.get('/api/linkedin', async (req, res) => {
                     }
 
                     const allText = (item.title + ' ' + (item.snippet || '')).toLowerCase();
-                    const hasUniHint = allText.includes('muhammadiyah') || allText.includes('umm') || allText.includes('malang');
+                    const hasMuhammadiyah = allText.includes('muhammadiyah') || allText.includes('umm');
 
-                    candidates.push({
-                        url: item.link.split('?')[0],
-                        name: parsedData.name,
-                        headline: parsedData.headline,
-                        company: parsedData.company,
-                        location: parsedData.location,
-                        matchScore,
-                        hasUniHint
-                    });
-
-                    console.log(`[LinkedIn] Serper API: ${parsedData.name} | Score: ${matchScore}%`);
+                    // Hard validation Muhammadiyah
+                    if (hasMuhammadiyah) {
+                        candidates.push({
+                            url: item.link.split('?')[0],
+                            name: parsedData.name,
+                            headline: parsedData.headline,
+                            company: parsedData.company,
+                            location: parsedData.location,
+                            matchScore,
+                            hasUniHint: true
+                        });
+                        console.log(`[LinkedIn] Serper API: ${parsedData.name} | Muhammadiyah Validated! | Score: ${matchScore}%`);
+                    } else {
+                        console.log(`[LinkedIn] Ditolak: ${parsedData.name} (Bukan Muhammadiyah)`);
+                    }
                 }
             } else {
                 console.log('[LinkedIn] Serper API me-return 0 hasil.');
