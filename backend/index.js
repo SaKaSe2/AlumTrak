@@ -403,6 +403,85 @@ app.get('/api/linkedin', async (req, res) => {
     }
 });
 
+// Endpoint pencarian sosial media (Facebook & Instagram) via Serper
+app.get('/api/social-search', async (req, res) => {
+    const { target, platform } = req.query;
+
+    if (!target || !platform) {
+        return res.status(400).json({ success: false, error: 'Parameter target dan platform wajib diisi' });
+    }
+
+    const SERPER_KEY = process.env.SERPER_API_KEY;
+    if (!SERPER_KEY) {
+        return res.json({ success: false, error: 'SERPER_API_KEY tidak ditemukan' });
+    }
+
+    // Konfigurasi per platform
+    const config = {
+        facebook: {
+            siteFilter: 'site:facebook.com',
+            urlPattern: /facebook\.com\/[a-zA-Z0-9._-]+/i,
+            excludePatterns: ['/pages/', '/groups/', '/events/', '/watch/', '/marketplace/']
+        },
+        instagram: {
+            siteFilter: 'site:instagram.com',
+            urlPattern: /instagram\.com\/[a-zA-Z0-9._]+/i,
+            excludePatterns: ['/p/', '/reel/', '/explore/', '/stories/']
+        }
+    };
+
+    const cfg = config[platform];
+    if (!cfg) {
+        return res.json({ success: false, error: 'Platform tidak didukung. Gunakan: facebook atau instagram' });
+    }
+
+    try {
+        console.log(`[${platform}] Mencari profil "${target}" via Serper...`);
+        const query = `${cfg.siteFilter} "${target}"`;
+
+        const response = await fetch('https://google.serper.dev/search', {
+            method: 'POST',
+            headers: {
+                'X-API-KEY': SERPER_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ q: query, num: 5 })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Serper API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const results = data.organic || [];
+
+        // Ambil hasil pertama yang merupakan profil (bukan post/group/page)
+        for (const item of results) {
+            const url = item.link || '';
+            const isExcluded = cfg.excludePatterns.some(p => url.includes(p));
+            if (!isExcluded && cfg.urlPattern.test(url)) {
+                console.log(`[${platform}] Profil ditemukan: ${url}`);
+                return res.json({
+                    success: true,
+                    data: {
+                        url: url,
+                        title: item.title || '',
+                        snippet: item.snippet || '',
+                        platform: platform
+                    }
+                });
+            }
+        }
+
+        console.log(`[${platform}] Tidak ditemukan profil untuk "${target}"`);
+        return res.json({ success: false, error: `Profil ${platform} tidak ditemukan` });
+
+    } catch (error) {
+        console.error(`[${platform}] Error:`, error.message);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Keep-alive: Ping diri sendiri setiap 14 menit agar Render free tier tidak tidur
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {

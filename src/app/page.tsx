@@ -492,6 +492,42 @@ export default function Home() {
          // Silently fail
       }
 
+      // Sumber 4: Facebook (jika aktif)
+      let fbData: any = null;
+      if (activeSrc.includes('Facebook')) {
+        try {
+          addLogContext(`  -> [BOT] Mencari profil Facebook untuk ${a.nama}...`, 'c-sys');
+          const fbRes = await fetch(`/api/osint-social?target=${encodeURIComponent(a.nama)}&platform=facebook`);
+          const fbJson = await fbRes.json();
+          if (fbJson.success && fbJson.data) {
+            fbData = fbJson.data;
+            addLogContext(`  [OK] Facebook HIT: ${fbData.url}`, 'c-ok');
+          } else {
+            addLogContext(`  [WARN] Facebook: Profil tidak ditemukan`, 'c-sys');
+          }
+        } catch {
+          // Silently fail
+        }
+      }
+
+      // Sumber 5: Instagram (jika aktif)
+      let igData: any = null;
+      if (activeSrc.includes('Instagram')) {
+        try {
+          addLogContext(`  -> [BOT] Mencari profil Instagram untuk ${a.nama}...`, 'c-sys');
+          const igRes = await fetch(`/api/osint-social?target=${encodeURIComponent(a.nama)}&platform=instagram`);
+          const igJson = await igRes.json();
+          if (igJson.success && igJson.data) {
+            igData = igJson.data;
+            addLogContext(`  [OK] Instagram HIT: ${igData.url}`, 'c-ok');
+          } else {
+            addLogContext(`  [WARN] Instagram: Profil tidak ditemukan`, 'c-sys');
+          }
+        } catch {
+          // Silently fail
+        }
+      }
+
       const hasPddikti = pddikti?.status_pddikti === 'TERVERIFIKASI_RESMI';
       const bonusPddikti = hasPddikti ? 0.15 : 0;
       
@@ -575,7 +611,18 @@ export default function Home() {
           a.posisi = a.posisi || tracerUmmData.jabatan || '';
           a.email = tracerUmmData.email || a.email || '';
           a.noHp = tracerUmmData.no_hp || a.noHp || '';
-          // Jabatan sudah ke set di blok if di atas
+        }
+
+        // Simpan URL Facebook jika ditemukan
+        if (fbData) {
+          a.sosmed_fb = fbData.url || '';
+          a.sources.push('Facebook');
+        }
+
+        // Simpan URL Instagram jika ditemukan
+        if (igData) {
+          a.sosmed_ig = igData.url || '';
+          a.sources.push('Instagram');
         }
 
         if(!osintData && !linkedinData && !tracerUmmData) {
@@ -628,6 +675,8 @@ export default function Home() {
                      lokasi: a.lokasi, 
                      sources: a.sources, 
                      sosmed_linkedin: a.sosmed_linkedin,
+                     sosmed_fb: a.sosmed_fb,
+                     sosmed_ig: a.sosmed_ig,
                      email: a.email,
                      no_hp: a.noHp,
                      posisi: a.posisi,
