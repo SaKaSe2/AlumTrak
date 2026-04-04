@@ -54,14 +54,10 @@ const initialAlumni: Alumni[] = [];
 const initialEvidence: Evidence[] = [];
 const initialSources: Source[] = [
   {nama:'PDDikti',tipe:'sp-prof',kelas:'Pemerintah (PRIMER)',aktif:true,icon:'🏛️'},
-  {nama:'Google Scholar',tipe:'sp-academic',kelas:'Akademik',aktif:true,icon:'📚'},
   {nama:'LinkedIn',tipe:'sp-prof',kelas:'Profesional',aktif:true,icon:'💼'},
   {nama:'GitHub',tipe:'sp-tech',kelas:'Teknis',aktif:true,icon:'💻'},
-  {nama:'ResearchGate',tipe:'sp-academic',kelas:'Akademik',aktif:true,icon:'🔬'},
-  {nama:'ORCID',tipe:'sp-academic',kelas:'Akademik',aktif:false,icon:'🆔'},
   {nama:'Instagram',tipe:'sp-social',kelas:'Sosmed',aktif:false,icon:'📷'},
   {nama:'Facebook',tipe:'sp-social',kelas:'Sosmed',aktif:false,icon:'👍'},
-  {nama:'Web Search',tipe:'sp-prof',kelas:'Umum',aktif:true,icon:'🌐'}
 ];
 
 export default function Home() {
