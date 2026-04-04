@@ -156,6 +156,8 @@ export default function Home() {
   const [searchNim, setSearchNim] = useState('');
   const [searchTahun, setSearchTahun] = useState('');
   const [dataLimit, setDataLimit] = useState<number>(50);
+  const [useNim, setUseNim] = useState(false);
+  const [useTahun, setUseTahun] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -910,16 +912,42 @@ export default function Home() {
                     <div className="card-body">
                       <div className="mb-6">
                         <label>Target Set (Langkah 3)</label>
-                        <select className="mb-6"><option value="pending">Belum Dilacak ({pendingCount})</option><option value="all">Semua Target</option></select>
+                        <div style={{display:'flex', flexDirection:'column', gap:'12px', marginTop:'12px', marginBottom: '24px', background:'rgba(255,255,255,0.02)', padding:'12px', borderRadius:'6px', border:'1px solid rgba(255,255,255,0.05)'}}>
+                          <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                            <input type="checkbox" checked={true} readOnly style={{accentColor:'var(--accent)'}} />
+                            <span style={{fontSize:'13px', width:'130px', color:'var(--text-muted)'}}>Batasi Kuota:</span>
+                            <select 
+                              className="input flex-1" 
+                              style={{padding:'4px 8px', fontSize:'13px', height:'auto', minHeight:'28px'}}
+                              value={dataLimit}
+                              onChange={(e)=>setDataLimit(Number(e.target.value))}
+                            >
+                              <option value={10}>Maks. 10 Data</option>
+                              <option value={50}>Maks. 50 Data</option>
+                              <option value={100}>Maks. 100 Data</option>
+                              <option value={500}>Maks. 500 Data</option>
+                            </select>
+                          </div>
+                          <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                            <input type="checkbox" checked={useNim} onChange={(e)=>{setUseNim(e.target.checked); if(!e.target.checked) setSearchNim('');}} style={{accentColor:'var(--accent)'}} />
+                            <span style={{fontSize:'13px', width:'130px', color: useNim ? 'var(--text)' : 'var(--text-muted)'}}>Spesifik NIM:</span>
+                            <input type="text" className="input flex-1" placeholder="Misal: 20151..." value={searchNim} onChange={(e)=>setSearchNim(e.target.value)} disabled={!useNim} style={{padding:'4px 8px', fontSize:'13px', height:'28px', opacity: useNim?1:0.4}} />
+                          </div>
+                          <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                            <input type="checkbox" checked={useTahun} onChange={(e)=>{setUseTahun(e.target.checked); if(!e.target.checked) setSearchTahun('');}} style={{accentColor:'var(--accent)'}} />
+                            <span style={{fontSize:'13px', width:'130px', color: useTahun ? 'var(--text)' : 'var(--text-muted)'}}>Tahun Masuk:</span>
+                            <input type="text" className="input flex-1" placeholder="Misal: 2015" value={searchTahun} onChange={(e)=>setSearchTahun(e.target.value)} disabled={!useTahun} style={{padding:'4px 8px', fontSize:'13px', height:'28px', opacity: useTahun?1:0.4}} />
+                          </div>
+                        </div>
                       </div>
                       <div className="mb-6">
                         <label>Active Modules (Langkah 2)</label>
-                        <div className="source-pills">
+                        <div className="source-pills" style={{marginTop:'8px'}}>
                           {sources.filter(s=>s.aktif).map((s,i) => <span key={i} className={`sp-pill ${s.tipe}`}>{s.nama}</span>)}
                         </div>
                       </div>
-                      <button className="btn w-full" onClick={handleRunJob} disabled={isTracking} style={{opacity: isTracking?0.7:1}}>
-                        <span>{isTracking ? 'EXECUTING...' : 'INITIALIZE TRACKING SEQUENCE'}</span>
+                      <button className="btn w-full" onClick={handleRunJob} disabled={isTracking || pendingCount === 0} style={{opacity: (isTracking || pendingCount === 0)?0.5:1}}>
+                        <span>{isTracking ? 'EXECUTING...' : `JALANKAN PELACAKAN (${pendingCount} TARGET)`}</span>
                       </button>
                     </div>
                   </div>
