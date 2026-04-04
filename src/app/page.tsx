@@ -506,8 +506,8 @@ export default function Home() {
         f++;
         a.status = 'Teridentifikasi';
         a.confidence = (osintData || linkedinData || tracerUmmData) ? 0.95 : Math.min((0.60 + Math.random() * 0.25) + bonusPddikti, 1.0);
-        a.jabatan = tracerUmmData ? tracerUmmData.jabatan : (osintData ? (osintData.posisi || 'IT') : (linkedinData ? linkedinData.headline : ''));
-        a.instansi = tracerUmmData ? tracerUmmData.instansi : (osintData ? (osintData.instansi || 'Freelance') : (linkedinData ? (linkedinData.company || '') : ''));
+        a.instansi = (linkedinData && linkedinData.company) ? linkedinData.company : ((osintData && osintData.instansi) ? osintData.instansi : (tracerUmmData ? tracerUmmData.instansi : ''));
+        a.jabatan = (linkedinData && linkedinData.headline) ? linkedinData.headline : ((osintData && osintData.posisi) ? osintData.posisi : (tracerUmmData ? tracerUmmData.jabatan : ''));
         a.lokasi = osintData ? 'Indonesia (API)' : (linkedinData ? (linkedinData.location || '') : '');
         a.sources = hasPddikti ? ['PDDikti', activeSrc[1] || 'Web Search'] : [activeSrc[1] || 'Web Search'];
 
@@ -569,8 +569,8 @@ export default function Home() {
 
         if(tracerUmmData) {
           a.sources.push('Tracer UMM (Internal)');
-          a.tempatBekerja = tracerUmmData.instansi || a.tempatBekerja || '';
-          a.posisi = tracerUmmData.jabatan || a.posisi || '';
+          a.tempatBekerja = a.tempatBekerja || tracerUmmData.instansi || '';
+          a.posisi = a.posisi || tracerUmmData.jabatan || '';
           a.email = tracerUmmData.email || a.email || '';
           a.noHp = tracerUmmData.no_hp || a.noHp || '';
           // Jabatan sudah ke set di blok if di atas
@@ -916,7 +916,7 @@ export default function Home() {
                             <td><span style={{fontSize:'12px'}}>{a.prodi}</span></td>
                             <td>{getStatusBadge(a.status)}</td>
                             <td>{getConfBar(a.confidence)}</td>
-                            <td><button className="btn btn-outline btn-sm" onClick={()=>{setDetailId(a.id); setModal('detailModal');}}>DETAIL</button></td>
+                            <td><button className="btn btn-outline btn-sm" onClick={()=>{setDetailId(a.id); setDetailForm(a); setModal('detailModal');}}>DETAIL</button></td>
                           </tr>
                         ))}
                       </tbody>
@@ -1015,7 +1015,7 @@ export default function Home() {
                           <td><div style={{fontSize:'13px'}}>{a.jabatan} <span style={{color:'var(--accent)'}}>@</span> {a.instansi}</div><div className="mono" style={{fontSize:'10px',color:'var(--text-muted)'}}>Via: {a.sources.join(', ')}</div></td>
                           <td><span style={{fontSize:'12px',color:'var(--text-muted)'}}>{a.lokasi}</span></td>
                           <td>{getConfBar(a.confidence)}</td>
-                          <td><button className="btn btn-outline btn-sm" onClick={()=>{setDetailId(a.id); setModal('detailModal');}}>INSPECT</button></td>
+                          <td><button className="btn btn-outline btn-sm" onClick={()=>{setDetailId(a.id); setDetailForm(a); setModal('detailModal');}}>INSPECT</button></td>
                         </tr>
                       ))}
                     </tbody>
@@ -1279,23 +1279,23 @@ export default function Home() {
                 </div>
                 
                 <div className="form-grid" style={{gridTemplateColumns:'1fr 1fr', gap:'16px'}}>
-                  <div><label>Alamat Email</label><input type="email" value={detailA.email||''} onChange={e => setDetailForm({...detailForm, email: e.target.value})} placeholder="Alamat email..." /></div>
-                  <div><label>Nomor HP</label><input type="text" value={detailA.noHp||''} onChange={e => setDetailForm({...detailForm, noHp: e.target.value})} placeholder="081xxx..." /></div>
+                  <div><label>Alamat Email</label><input type="email" value={detailForm?.email||''} onChange={e => setDetailForm({...detailForm, email: e.target.value})} placeholder="Alamat email..." /></div>
+                  <div><label>Nomor HP</label><input type="text" value={detailForm?.noHp||''} onChange={e => setDetailForm({...detailForm, noHp: e.target.value})} placeholder="081xxx..." /></div>
                   
-                  <div><label>LinkedIn</label><input type="text" value={detailA.sosmed_linkedin||''} onChange={e => setDetailForm({...detailForm, sosmed_linkedin: e.target.value})} placeholder="URL / Username..." /></div>
-                  <div><label>Instagram</label><input type="text" value={detailA.sosmed_ig||''} onChange={e => setDetailForm({...detailForm, sosmed_ig: e.target.value})} placeholder="@username..." /></div>
+                  <div><label>LinkedIn</label><input type="text" value={detailForm?.sosmed_linkedin||''} onChange={e => setDetailForm({...detailForm, sosmed_linkedin: e.target.value})} placeholder="URL / Username..." /></div>
+                  <div><label>Instagram</label><input type="text" value={detailForm?.sosmed_ig||''} onChange={e => setDetailForm({...detailForm, sosmed_ig: e.target.value})} placeholder="@username..." /></div>
                   
-                  <div><label>Facebook</label><input type="text" value={detailA.sosmed_fb||''} onChange={e => setDetailForm({...detailForm, sosmed_fb: e.target.value})} placeholder="Nama / URL FB..." /></div>
-                  <div><label>TikTok</label><input type="text" value={detailA.sosmed_tiktok||''} onChange={e => setDetailForm({...detailForm, sosmed_tiktok: e.target.value})} placeholder="@username..." /></div>
+                  <div><label>Facebook</label><input type="text" value={detailForm?.sosmed_fb||''} onChange={e => setDetailForm({...detailForm, sosmed_fb: e.target.value})} placeholder="Nama / URL FB..." /></div>
+                  <div><label>TikTok</label><input type="text" value={detailForm?.sosmed_tiktok||''} onChange={e => setDetailForm({...detailForm, sosmed_tiktok: e.target.value})} placeholder="@username..." /></div>
                   
-                  <div><label>Tempat Bekerja (Instansi)</label><input type="text" value={detailA.tempatBekerja||detailA.instansi||''} onChange={e => setDetailForm({...detailForm, tempatBekerja: e.target.value})} placeholder="Nama perusahaan..." /></div>
-                  <div><label>Sosmed Instansi Tempat Kerja</label><input type="text" value={detailA.sosmed_tempatBekerja||''} onChange={e => setDetailForm({...detailForm, sosmed_tempatBekerja: e.target.value})} placeholder="Akun institusi..." /></div>
+                  <div><label>Tempat Bekerja (Instansi)</label><input type="text" value={detailForm?.tempatBekerja||detailForm?.instansi||''} onChange={e => setDetailForm({...detailForm, tempatBekerja: e.target.value})} placeholder="Nama perusahaan..." /></div>
+                  <div><label>Sosmed Instansi Tempat Kerja</label><input type="text" value={detailForm?.sosmed_tempatBekerja||''} onChange={e => setDetailForm({...detailForm, sosmed_tempatBekerja: e.target.value})} placeholder="Akun institusi..." /></div>
                   
-                  <div style={{gridColumn:'span 2'}}><label>Alamat Lengkap Kantor</label><input type="text" value={detailA.alamatBekerja||''} onChange={e => setDetailForm({...detailForm, alamatBekerja: e.target.value})} placeholder="Alamat fisik perusahaan..." /></div>
+                  <div style={{gridColumn:'span 2'}}><label>Alamat Lengkap Kantor</label><input type="text" value={detailForm?.alamatBekerja||''} onChange={e => setDetailForm({...detailForm, alamatBekerja: e.target.value})} placeholder="Alamat fisik perusahaan..." /></div>
                   
-                  <div><label>Posisi / Jabatan</label><input type="text" value={detailA.posisi||detailA.jabatan||''} onChange={e => setDetailForm({...detailForm, posisi: e.target.value})} placeholder="Jabatan pekerja..." /></div>
+                  <div><label>Posisi / Jabatan</label><input type="text" value={detailForm?.posisi||detailForm?.jabatan||''} onChange={e => setDetailForm({...detailForm, posisi: e.target.value})} placeholder="Jabatan pekerja..." /></div>
                   <div><label>Jenis Pekerjaan</label>
-                    <select value={detailA.jenisPekerjaan||''} onChange={e => setDetailForm({...detailForm, jenisPekerjaan: e.target.value as any})}>
+                    <select value={detailForm?.jenisPekerjaan||''} onChange={e => setDetailForm({...detailForm, jenisPekerjaan: e.target.value as any})}>
                       <option value="">-- Pilih Jenis --</option>
                       <option value="PNS">PNS</option>
                       <option value="Swasta">Swasta</option>
