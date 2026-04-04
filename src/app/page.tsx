@@ -1292,7 +1292,12 @@ export default function Home() {
               <div style={{display:'grid',gridTemplateColumns:'1fr 180px',gap:'20px'}}>
                 <div className="form-grid">
                   {[
-                    ['NIM', detailA.nim], ['Prodi', detailA.prodi], ['Thn Lulus', detailA.tahun], ['Opt-Out', detailA.optout?'Ya':'Tidak']
+                    ['NIM', detailA.nim], 
+                    ['Prodi', detailA.prodi], 
+                    ['Thn Lulus', detailA.tahun], 
+                    ['Email', detailA.email || '-'], 
+                    ['Nomor HP', detailA.noHp || '-'], 
+                    ['Opt-Out', detailA.optout?'Ya':'Tidak']
                   ].map(([l,v], i) => (
                     <div key={i}><label>{l}</label><div style={{fontSize:'14px',fontWeight:500}}>{v}</div></div>
                   ))}
