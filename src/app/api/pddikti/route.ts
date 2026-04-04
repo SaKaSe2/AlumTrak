@@ -1,20 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-// Endpoint wrapper komunitas PDDikti (mirrors data resmi pddikti.kemdiktisaintek.go.id)
-const PDDIKTI_BASE = "https://api-pddikti.rone.dev";
-
-interface PddiktiMahasiswa {
-  id: string;
-  nama: string;
-  nim: string;
-  nama_pt: string;
-  sinkatan_pt: string;
-  nama_prodi: string;
-}
-
-interface PddiktiResponse {
-  mahasiswa: PddiktiMahasiswa[];
-}
+import PDDikti from "@x403/pddikti";
 
 export async function GET(request: NextRequest) {
   const keywordParam = request.nextUrl.searchParams.get("keyword") || request.nextUrl.searchParams.get("nama");
@@ -26,49 +11,36 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const keyword = encodeURIComponent(keywordParam);
-    const res = await fetch(`${PDDIKTI_BASE}/search/mhs/${keyword}`, {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(12000), // timeout 12 detik
+    const pddikti = new PDDikti({
+      cacheEnabled: false,
     });
 
-    if (!res.ok) {
-      return NextResponse.json(
-        { status_pddikti: "GAGAL", keterangan: `PDDikti HTTP ${res.status}` },
-        { status: 200 }
-      );
-    }
+    const students = await pddikti.search.students({
+      name: keywordParam,
+    });
 
-    // Baca response sebagai text dulu untuk menghindari crash pada body kosong
-    const text = await res.text();
-    if (!text || text.trim().length === 0) {
-      return NextResponse.json(
-        { status_pddikti: "GAGAL", keterangan: "PDDikti mengembalikan response kosong" },
-        { status: 200 }
-      );
+    if (!students || students.length === 0) {
+      return NextResponse.json({
+        status_pddikti: "TIDAK_DITEMUKAN",
+        kandidat: [],
+        total_kandidat: 0,
+        keterangan: "Tidak ada alumni yang cocok."
+      });
     }
-
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      return NextResponse.json(
-        { status_pddikti: "GAGAL", keterangan: "PDDikti mengembalikan format JSON tidak valid" },
-        { status: 200 }
-      );
-    }
-
-    // API mengembalikan array langsung, bukan { mahasiswa: [...] }
-    const allMhs: PddiktiMahasiswa[] = Array.isArray(data)
-      ? data
-      : (data.mahasiswa || []);
 
     // Filter hanya alumni UMM 
-    const ummResults = allMhs.filter(
-      (m) =>
-        m.nama_pt?.toUpperCase().includes("MUHAMMADIYAH MALANG") ||
-        m.sinkatan_pt?.toUpperCase() === "UMM"
-    );
+    const ummResults = students.filter(
+      (m: any) =>
+        m.campusName?.toUpperCase().includes("MUHAMMADIYAH MALANG") ||
+        m.campusShortName?.toUpperCase() === "UMM"
+    ).map((m: any) => ({
+        id: m.id,
+        nama: m.name,
+        nim: m.nim,
+        nama_pt: m.campusName,
+        sinkatan_pt: m.campusShortName || "",
+        nama_prodi: m.programName,
+    }));
 
     return NextResponse.json({
       status_pddikti: ummResults.length > 0 ? "OK" : "TIDAK_DITEMUKAN",

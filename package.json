@@ -11,6 +11,7 @@
   "dependencies": {
     "@sparticuz/chromium": "^143.0.4",
     "@supabase/supabase-js": "^2.101.1",
+    "@x403/pddikti": "^0.1.6-beta",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.35.2",
