@@ -351,6 +351,32 @@ app.get('/api/linkedin', async (req, res) => {
         });
 
         const best = validCandidates[0];
+        let physicalAddress = null;
+
+        if (best.company && !best.company.toLowerCase().includes('hidden')) {
+            try {
+                console.log(`[Google Places] Mencari alamat fisik untuk: "${best.company}"`);
+                const reqPlaces = await fetch('https://google.serper.dev/places', {
+                    method: 'POST',
+                    headers: {
+                        'X-API-KEY': SERPER_KEY,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ q: best.company })
+                });
+
+                if (reqPlaces.ok) {
+                    const placeData = await reqPlaces.json();
+                    if (placeData.places && placeData.places.length > 0) {
+                        physicalAddress = placeData.places[0].address;
+                        console.log(`[Google Places] Alamat Fisik Ditemukan: ${physicalAddress}`);
+                    }
+                }
+            } catch (err) {
+                console.error(`[Google Places] Gagal:`, err.message);
+            }
+        }
+
         return res.json({
             success: true,
             data: {
@@ -359,6 +385,7 @@ app.get('/api/linkedin', async (req, res) => {
                 headline: best.headline,
                 company: best.company,
                 location: best.location,
+                physicalAddress: physicalAddress,
                 matchScore: best.matchScore,
                 hasUniHint: best.hasUniHint,
                 totalChecked: candidates.length
