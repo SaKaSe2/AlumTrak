@@ -39,7 +39,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const data = await res.json();
+    // Baca response sebagai text dulu untuk menghindari crash pada body kosong
+    const text = await res.text();
+    if (!text || text.trim().length === 0) {
+      return NextResponse.json(
+        { status_pddikti: "GAGAL", keterangan: "PDDikti mengembalikan response kosong" },
+        { status: 200 }
+      );
+    }
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return NextResponse.json(
+        { status_pddikti: "GAGAL", keterangan: "PDDikti mengembalikan format JSON tidak valid" },
+        { status: 200 }
+      );
+    }
 
     // API mengembalikan array langsung, bukan { mahasiswa: [...] }
     const allMhs: PddiktiMahasiswa[] = Array.isArray(data)
