@@ -360,7 +360,7 @@ export default function Home() {
     setIsTracking(true);
     setConsoleLog([]);
     const activeSrc = sources.filter(s=>s.aktif).map(s=>s.nama);
-    const targets = alumni.filter(a => a.status === 'Belum Dilacak' && !a.optout);
+    const targets = alumni.filter(a => !a.optout && (filterAlumni ? a.status === filterAlumni : a.status !== 'Teridentifikasi'));
     
     addLogContext(`[BOOT] OSINT Engine v2.0 initialized. Targets: ${targets.length}. Modules: [${activeSrc.join(', ')}]`);
     addLogContext('[INFO] Revisi Modul 2: PDDikti sebagai sumber verifikasi PRIMER (Langkah 0)', 'c-sys');
@@ -761,7 +761,7 @@ export default function Home() {
   }
 
   // --- APP VIEW ---
-  const pendingCount = alumni.filter(a=>a.status==='Belum Dilacak').length;
+  const pendingCount = alumni.filter(a => !a.optout && (filterAlumni ? a.status === filterAlumni : a.status !== 'Teridentifikasi')).length;
   const filteredAlumni = alumni.filter(a => 
     (!searchAlumni || a.nama.toLowerCase().includes(searchAlumni.toLowerCase()) || a.nim.includes(searchAlumni)) &&
     (!filterAlumni || a.status === filterAlumni)
@@ -936,6 +936,20 @@ export default function Home() {
                       <div className="mb-6">
                         <label>Target Set (Langkah 3)</label>
                         <div style={{display:'flex', flexDirection:'column', gap:'12px', marginTop:'12px', marginBottom: '24px', background:'rgba(255,255,255,0.02)', padding:'16px', borderRadius:'6px', border:'1px solid rgba(255,255,255,0.05)'}}>
+                          <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+                            <input type="checkbox" checked={true} readOnly style={{accentColor:'var(--accent)', width:'16px', height:'16px', flexShrink:0}} />
+                            <span style={{fontSize:'13px', minWidth:'110px', color:'var(--text-muted)'}}>Target Status:</span>
+                            <select 
+                              style={{padding:'8px 12px', fontSize:'13px', background:'rgba(0,0,0,0.3)', width: '100%'}}
+                              value={filterAlumni}
+                              onChange={(e)=>setFilterAlumni(e.target.value)}
+                            >
+                              <option value="Belum Dilacak">Belum Dilacak (Baru)</option>
+                              <option value="Belum Ditemukan">Belum Ditemukan (Lacak Ulang)</option>
+                              <option value="Perlu Verifikasi">Perlu Verifikasi (Lacak Ulang)</option>
+                              <option value="">Semua Status</option>
+                            </select>
+                          </div>
                           <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
                             <input type="checkbox" checked={true} readOnly style={{accentColor:'var(--accent)', width:'16px', height:'16px', flexShrink:0}} />
                             <span style={{fontSize:'13px', minWidth:'110px', color:'var(--text-muted)'}}>Batasi Kuota:</span>
