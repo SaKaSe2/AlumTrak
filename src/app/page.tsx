@@ -71,6 +71,14 @@ export default function Home() {
   const [totalAlumniDB, setTotalAlumniDB] = useState(0);
 
   const fetchAlumniFromSupabase = useCallback(async (search = '', filter = '', nim = '', tahun = '', limit = 50) => {
+    if (projectMode === 'DP3') {
+      setAlumni([]);
+      setTotalAlumniDB(0);
+      setIsLoadingDB(false);
+      setIsLoaded(true);
+      return;
+    }
+    
     setIsLoadingDB(true);
     try {
       let query = supabase.from('alumni').select('*', { count: 'exact' });
@@ -128,7 +136,7 @@ export default function Home() {
       setIsLoadingDB(false);
       setIsLoaded(true);
     }
-  }, []);
+  }, [projectMode]);
 
   // Fetch initial data
   useEffect(() => {
