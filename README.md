@@ -9,6 +9,11 @@ Sesuai dengan instruksi tugas akhir Daily Project 3 (Produk Web):
 - **Link Publish Web (Vercel)**: [https://alumtrak.vercel.app](https://alumtrak.vercel.app)
 - **Link Github Source Code**: [https://github.com/SaKaSe2/AlumTrak](https://github.com/SaKaSe2/AlumTrak)
 
+### Kredensial Login (Untuk Akses Penilaian & Pengujian)
+Silakan gunakan akun berikut untuk masuk ke dashboard sistem jika aplikasi meminta autentikasi:
+- **Username / Email**: `admin`
+- **Password**: `umm2026`
+
 *(Catatan: Proyek ini dibangun sebagai aplikasi berbasis Web responsif yang dapat diakses di Desktop maupun Mobile Browser. Oleh karena itu, tidak ada terbitan APK standalone untuk versi Mobile).*
 
 ---
@@ -30,31 +35,7 @@ Sesuai yang ditetapkan dalam desain pada Daily Project 2, berikut adalah hasil u
 
 ---
 
-## Fitur Baru (Modul 2 Revisi): Integrasi PDDikti
 
-Aplikasi ini sekarang terintegrasi penuh dengan Pangkalan Data Pendidikan Tinggi (PDDikti) untuk memastikan keakuratan data profil mahasiswa dan memangkas entri manual.
-
-### 1. Pencarian Langsung dari PDDikti
-Pengguna tidak perlu lagi mengisi form alumni secara manual. Pencarian cerdas kami terhubung langsung secara real-time ke *database* PDDikti UMM. Hanya dengan memasukkan Nama, NIM, atau Program Studi, data disinkronkan secara mulus.
-![Pencarian Langsung](./public/screencap_4.png)
-
-### 2. Validasi Akun Resmi
-Identitas setiap alumni dicocokkan otomatis ke laman PDDikti pemerintah sebelum menjalankan pelacakan Multi-Sumber OSINT (Langkah 0). Bukti status kelulusan mereka terjamin legalitasnya.
-![PDDikti Biodata Asli](./public/screencap_5.png)
-
-### 3. Data Master Terverifikasi
-Status validasi akan tampil di Dashboard, memberikan bonus parameter "Algoritma Terverifikasi PDDikti". Hal ini menaikkan tingkat validitas alumni ke angka maksimal yang dapat dipertanggungjawabkan di tingkat akademik.
-![Data Master](./public/screencap_3.png)
-
-### 4. Enjin Pelacakan OSINT yang Akurat
-Proses crawling yang sebelumnya bisa bias sekarang jauh lebih tajam. Berkat verifikasi PDDikti (Langkah 0), pencarian Google Scholar, LinkedIn dkk menggunakan identitas asli yang terdefinisi kuat secara kebahasaan, bukan sekadar tebakan data nama panggilan.
-![Tracking OSINT Logs](./public/screencap_2.png)
-
-### 5. Hasil Akhir (Identifikasi Ditingkatkan)
-Kesalahan positif berkurang karena seluruh skor afinitas dibobot berdasarkan seberapa dekat profil OSINT temuan dengan profil asli PDDikti.
-![Hasil Identifikasi OSINT](./public/screencap_1.png)
-
----
 
 ## Panduan Instalasi Lokal
 

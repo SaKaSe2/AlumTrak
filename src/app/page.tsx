@@ -61,7 +61,8 @@ const initialSources: Source[] = [
 ];
 
 export default function Home() {
-  const [view, setView] = useState<'landing'|'app'>('landing');
+  const [view, setView] = useState<'selection'|'app'>('selection');
+  const [projectMode, setProjectMode] = useState<'DP3'|'DP4'|null>(null);
   
   const [alumni, setAlumni] = useState<Alumni[]>([]);
   const [evidence, setEvidence] = useState<any[]>([]);
@@ -205,51 +206,7 @@ export default function Home() {
   }, [consoleLog]);
 
   // Handle intersection observer for landing page
-  useEffect(() => {
-    if(view === 'landing') {
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('active');
-          }
-        });
-      }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
-      
-      const reveals = document.querySelectorAll('.reveal');
-      reveals.forEach(el => observer.observe(el));
-      
-      // landing terminal animation
-      const tLines = ["[SYS] Inisialisasi engine OSINT...","[INFO] Target: M. Rizky (UMM)","[OK] Ditemukan di LinkedIn & GitHub","[OK] Scoring Afiliasi = 0.87","[SYS] Profil terverifikasi."];
-      let lIdx=0;
-      let to: NodeJS.Timeout;
-      const tOut = document.getElementById('land-term');
-      const typeTerm = () => {
-        if(!tOut || lIdx>=tLines.length) return;
-        const d = document.createElement('div');
-        d.className = 'term-line mono';
-        d.style.color = tLines[lIdx].includes('[OK]') ? 'var(--green)' : 'var(--text-muted)';
-        d.innerText = tLines[lIdx];
-        tOut.appendChild(d);
-        lIdx++;
-        to = setTimeout(typeTerm, 900+Math.random()*600);
-      };
-      to = setTimeout(typeTerm, 1500);
-
-      // nav blur
-      const nav = document.getElementById('navbar');
-      const onScroll = () => {
-        if(window.scrollY > 50) nav?.classList.add('scrolled');
-        else nav?.classList.remove('scrolled');
-      };
-      window.addEventListener('scroll', onScroll);
-
-      return () => {
-        reveals.forEach(el => observer.unobserve(el));
-        clearTimeout(to);
-        window.removeEventListener('scroll', onScroll);
-      };
-    }
-  }, [view]);
+  // Landing animations removed due to explicit instruction
 
   const handleSearchPDDikti = async () => {
     if(!searchKeyword) { showToast('Masukkan NIM, nama, atau prodi', 'warn'); return; }
@@ -717,100 +674,52 @@ export default function Home() {
   };
 
   // Views rendering
-  if(view === 'landing') {
+  if(view === 'selection') {
     return (
-      <div id="landing-view">
+      <div id="selection-view" style={{minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'40px', background:'var(--bg)'}}>
         <div className="grain"></div>
-        <div className="grid-bg"></div>
-        <div className="landing-nav" id="navbar">
-          <div className="container nav-inner">
-            <a href="#" className="logo">Alumni<span>Trace</span></a>
-            <div>
-              <button onClick={() => { setView('app'); window.scrollTo(0,0); }} className="btn btn-outline" style={{padding: '10px 20px'}}>
-                <span>Akses Dashboard</span>
-              </button>
+        <div style={{position:'relative', zIndex:10, width:'100%', maxWidth:'1000px'}}>
+          <div style={{textAlign:'center', marginBottom:'40px'}}>
+            <div className="logo" style={{fontSize:'32px', marginBottom:'8px'}}>Alumni<span>Trace</span></div>
+            <p className="mono" style={{color:'var(--text-muted)', letterSpacing:'2px', fontSize:'12px'}}>PILIH AREA KERJA WORKSPACE (DAILY PROJECT)</p>
+          </div>
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'24px'}}>
+            {/* DP3 Card */}
+            <div className="card" style={{cursor:'pointer', transition:'all 0.3s ease', border:'1px solid var(--border)'}} 
+                 onClick={() => { setProjectMode('DP3'); setView('app'); window.scrollTo(0,0); }}
+                 onMouseOver={(e)=>e.currentTarget.style.borderColor='var(--accent)'}
+                 onMouseOut={(e)=>e.currentTarget.style.borderColor='var(--border)'}>
+              <div className="card-body" style={{padding:'40px'}}>
+                <div className="badge" style={{marginBottom:'16px'}}>DAILY PROJECT 3</div>
+                <h2 style={{fontSize:'24px', marginBottom:'16px'}}>OSINT Engine & QA</h2>
+                <p style={{color:'var(--text-muted)', marginBottom:'24px', lineHeight:1.6, minHeight:'72px'}}>Mode untuk menilai arsitektur pelacakan dasar dan memvalidasi aplikasi dengan standar metrik kelayakan ISO 25010.</p>
+                <div style={{display:'flex', gap:'8px', flexWrap:'wrap', marginBottom:'32px'}}>
+                  <span className="sp-pill sp-prof" style={{fontSize:'10px'}}>Software Design</span>
+                  <span className="sp-pill sp-tech" style={{fontSize:'10px'}}>Algorithm Track</span>
+                </div>
+                <button className="btn w-full">AKSES SISTEM</button>
+              </div>
+            </div>
+
+            {/* DP4 Card */}
+            <div className="card" style={{cursor:'pointer', transition:'all 0.3s ease', border:'1px solid var(--border)'}} 
+                 onClick={() => { setProjectMode('DP4'); setView('app'); window.scrollTo(0,0); }}
+                 onMouseOver={(e)=>e.currentTarget.style.borderColor='var(--green)'}
+                 onMouseOut={(e)=>e.currentTarget.style.borderColor='var(--border)'}>
+              <div className="card-body" style={{padding:'40px'}}>
+                <div className="badge" style={{background:'rgba(52,211,153,0.1)', color:'var(--green)', borderColor:'rgba(52,211,153,0.2)', marginBottom:'16px'}}>DAILY PROJECT 4</div>
+                <h2 style={{fontSize:'24px', marginBottom:'16px'}}>Data Validation & PDDikti</h2>
+                <p style={{color:'var(--text-muted)', marginBottom:'24px', lineHeight:1.6, minHeight:'72px'}}>Mode pengumpulan data empiris (8 item target spesifik), dan pencocokan kebenaran melalui koneksi master PDDikti UMM.</p>
+                <div style={{display:'flex', gap:'8px', flexWrap:'wrap', marginBottom:'32px'}}>
+                  <span className="sp-pill sp-prof" style={{fontSize:'10px', background:'rgba(52,211,153,0.1)', color:'var(--green)'}}>Manual Collection</span>
+                  <span className="sp-pill sp-social" style={{fontSize:'10px'}}>PDDikti Verification</span>
+                </div>
+                <button className="btn w-full" style={{background:'var(--green)', color:'#000'}}>AKSES MANAJEMEN DATA</button>
+              </div>
             </div>
           </div>
         </div>
-
-        <main>
-          <section className="hero container">
-            <div style={{position: 'relative', zIndex: 10, maxWidth: '800px'}}>
-              <div className="badge reveal">OSINT TRACKING ENGINE</div>
-              <h1 className="reveal delay-1">Lacak jejak karir alumni tanpa <span className="highlight">isian manual.</span></h1>
-              <p className="reveal delay-2">Sistem pelacakan otomatis yang menyisir Google Scholar, LinkedIn, dan 6 sumber publik lainnya untuk memetakan karir lulusan universitas Anda secara instant.</p>
-              <div className="hero-buttons reveal delay-3">
-                <button onClick={() => { setView('app'); window.scrollTo(0,0); }} className="btn"><span>Buka Aplikasi Web</span></button>
-                <a href="#demo" className="btn btn-outline"><span>Lihat Cara Kerja</span></a>
-              </div>
-              <div className="terminal-wrap reveal delay-3" style={{animationDelay: '0.4s'}}>
-                <div className="terminal-header"><div className="dot"></div><div className="dot"></div><div className="dot"></div></div>
-                <div className="terminal-body mono" id="land-term"></div>
-              </div>
-            </div>
-          </section>
-
-          <section className="container" id="demo">
-            <div className="split-section">
-              <div className="reveal">
-                <div className="badge" style={{background:'transparent', borderColor:'var(--border)', color:'var(--text-muted)'}}>PARADIGMA LAMA</div>
-                <h2>Kuesioner membosankan yang tidak pernah diisi.</h2>
-                <p>Tracer study tradisional mengandalkan partisipasi aktif alumni. Hasilnya? Response rate di bawah 30%, data usang dalam 6 bulan, dan akreditasi yang terancam karena kurangnya jejak lulusan.</p>
-              </div>
-              <div className="story-card reveal delay-1">
-                <div className="badge">SOLUSI TRACE</div>
-                <h3 style={{color: 'var(--accent)', fontSize: '1.5rem', marginBottom:'12px'}}>Ekstraksi OSINT Otomatis</h3>
-                <p style={{marginBottom:0}}>Daripada bertanya, kami melacak rekam jejak digital. Algoritma kami mensimulasikan pencarian di 8 platform publik, melakukan disambiguasi nama, dan memverifikasi afiliasi institusi dengan confidence score akurat.</p>
-              </div>
-            </div>
-          </section>
-
-          <section className="container">
-            <div className="split-section">
-              <div className="reveal">
-                <div className="badge">TEKNOLOGI INTI</div>
-                <h2>Disambiguasi Cerdas & Cross-Validation</h2>
-                <p>Mengatasi nama umum (Budi, Siti) menggunakan bobot afiliasi, prodi, dan clustering timeline. Bukti validitas dinaikkan 20% otomatis dari konfirmasi silang antar multi-sumber independen.</p>
-              </div>
-              <div className="reveal delay-2" style={{background: 'var(--bg-surface)', padding: '40px', border: '1px solid var(--border-accent)', borderRadius: '8px'}}>
-                <h3 className="mono" style={{fontSize: '1rem', color: 'var(--accent)', marginBottom: '24px'}}>CONFIDENCE_SCORE_ALGO</h3>
-                <pre className="mono" style={{fontSize: '0.85rem', color: 'var(--text-muted)'}} dangerouslySetInnerHTML={{__html: `
-<span style="color:var(--purple)">function</span> <span style="color:var(--cyan)">runScoring</span>(alumni) {
-  <span style="color:var(--purple)">let</span> score = <span style="color:var(--amber)">0</span>;
-  
-  <span style="color:var(--purple)">if</span> (match_name) score += <span style="color:var(--amber)">0.30</span>;
-  <span style="color:var(--purple)">if</span> (match_affiliation) score += <span style="color:var(--amber)">0.35</span>;
-  <span style="color:var(--purple)">if</span> (match_timeline) score += <span style="color:var(--amber)">0.20</span>;
-  <span style="color:var(--purple)">if</span> (match_field) score += <span style="color:var(--amber)">0.15</span>;
-  
-  <span style="color:var(--text-muted)">// Cross-validation boost</span>
-  <span style="color:var(--purple)">if</span> (sources.length &gt;= <span style="color:var(--amber)">2</span>) {
-    score *= <span style="color:var(--amber)">1.20</span>; 
-  }
-  
-  <span style="color:var(--purple)">return</span> <span style="color:var(--cyan)">min</span>(score, <span style="color:var(--amber)">1.0</span>);
-}`}} />
-              </div>
-            </div>
-          </section>
-
-          <section className="cta-section">
-            <div className="container" style={{maxWidth: '600px', margin: '0 auto'}}>
-              <div className="badge reveal">TERINTEGRASI PENUH</div>
-              <h2 className="reveal delay-1">Siap lacak alumni Anda?</h2>
-              <p className="reveal delay-2" style={{margin: '0 auto 40px'}}>Buka aplikasi dashboard sekarang. Tanpa login, langsung eksekusi pelacakan 10 langkah simulasi Modul 2.</p>
-              <div className="reveal delay-3">
-                <button onClick={() => { setView('app'); window.scrollTo(0,0); }} className="btn" style={{fontSize: '16px', padding: '18px 40px'}}><span>Buka Aplikasi Web &rarr;</span></button>
-              </div>
-            </div>
-          </section>
-        </main>
-        <footer style={{padding: '60px 0', borderTop: '1px solid var(--border)', fontSize: '14px', color: 'var(--text-muted)'}}>
-          <div className="container" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-            <div className="logo">Alumni<span style={{color:'var(--text-muted)'}}>Trace</span></div>
-            <div className="mono" style={{fontSize: '11px'}}>v1.0 &copy; 2025 Universitas Muhammadiyah Malang</div>
-          </div>
-        </footer>
+        <footer style={{position:'absolute', bottom:'30px', color:'var(--text-muted)', fontSize:'12px'}} className="mono">v1.0 &copy; 2025 Universitas Muhammadiyah Malang</footer>
       </div>
     );
   }
@@ -830,7 +739,7 @@ export default function Home() {
         <aside className="sidebar">
           <div className="sidebar-header">
             <div className="logo" style={{fontSize: '18px', marginBottom: '4px'}}>Alumni<span>Trace</span></div>
-            <div className="mono" style={{fontSize: '9px', color: 'var(--text-muted)', letterSpacing: '1.5px'}}>SYSTEM v1.0 // UMM</div>
+            <div className="mono" style={{fontSize: '10px', color: projectMode==='DP4'?'var(--green)':'var(--accent)', letterSpacing: '1.5px', fontWeight:600}}>[MODE: {projectMode === 'DP3' ? 'PROJECT 3' : 'PROJECT 4'}]</div>
           </div>
           <nav className="nav-menu">
             <div className="nav-label">Main System</div>
@@ -850,7 +759,7 @@ export default function Home() {
             <button className={`nav-item ${page==='reports'?'active':''}`} onClick={()=>setPage('reports')}>📊 Laporan & ISO 25010</button>
           </nav>
           <div style={{padding: '24px', borderTop: '1px solid var(--border)'}}>
-            <button onClick={() => { setView('landing'); window.scrollTo(0,0); }} className="btn btn-outline btn-sm w-full"><span style={{fontFamily:"'JetBrains Mono',monospace",letterSpacing:'1px'}}>&larr; KEMBALI</span></button>
+            <button onClick={() => { setProjectMode(null); setView('selection'); window.scrollTo(0,0); }} className="btn btn-outline btn-sm w-full"><span style={{fontFamily:"'JetBrains Mono',monospace",letterSpacing:'1px'}}>&larr; TUKAR MODE PROYEK</span></button>
           </div>
         </aside>
 
@@ -873,20 +782,22 @@ export default function Home() {
                   <div className="stat-card c-amber"><div className="stat-val">{alumni.filter(a=>a.status==='Perlu Verifikasi').length}</div><div className="stat-lbl">Review Manual</div></div>
                   <div className="stat-card c-red"><div className="stat-val">{pendingCount}</div><div className="stat-lbl">Antrian</div></div>
                 </div>
-                <div className="stats-grid" style={{marginBottom:'32px'}}>
-                  <div className="stat-card" style={{gridColumn:'span 2', borderColor:'var(--border-accent)'}}>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                      <div>
-                        <div className="stat-lbl" style={{marginBottom:'8px'}}>PDDikti Verification (Langkah 0 - Revisi)</div>
-                        <div style={{fontSize:'14px',color:'var(--text-muted)'}}>Data resmi dari pddikti.kemdiktisaintek.go.id</div>
-                      </div>
-                      <div style={{textAlign:'right'}}>
-                        <div className="stat-val" style={{color:'var(--accent)'}}>{alumni.filter(a=>a.pddikti_status==='TERVERIFIKASI_RESMI').length}</div>
-                        <div className="stat-lbl">Terverifikasi PDDikti</div>
+                {projectMode === 'DP4' && (
+                  <div className="stats-grid" style={{marginBottom:'32px'}}>
+                    <div className="stat-card" style={{gridColumn:'span 2', borderColor:'var(--border-accent)'}}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                        <div>
+                          <div className="stat-lbl" style={{marginBottom:'8px'}}>PDDikti Verification (Verifikasi Identitas Master)</div>
+                          <div style={{fontSize:'14px',color:'var(--text-muted)'}}>Data resmi dari pddikti.kemdiktisaintek.go.id</div>
+                        </div>
+                        <div style={{textAlign:'right'}}>
+                          <div className="stat-val" style={{color:'var(--green)'}}>{alumni.filter(a=>a.pddikti_status==='TERVERIFIKASI_RESMI').length}</div>
+                          <div className="stat-lbl">Terverifikasi PDDikti</div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
                 
                 <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px'}}>
                   <div className="card">
@@ -1311,10 +1222,10 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* PDDikti Verification Panel (Langkah 0 - Revisi) */}
-              {detailA.pddikti_status && detailA.pddikti_status !== 'BELUM' && (
+              {/* PDDikti Verification Panel (Khusus DP4) */}
+              {projectMode === 'DP4' && detailA.pddikti_status && detailA.pddikti_status !== 'BELUM' && (
                 <div style={{background: detailA.pddikti_status==='TERVERIFIKASI_RESMI' ? 'rgba(52,211,153,0.05)' : 'rgba(251,191,36,0.05)', border:`1px solid ${detailA.pddikti_status==='TERVERIFIKASI_RESMI'?'rgba(52,211,153,0.2)':'rgba(251,191,36,0.2)'}`, borderRadius:'8px', padding:'20px', marginTop:'20px'}}>
-                  <label>VERIFIKASI PDDikti (Langkah 0)</label>
+                  <label>VERIFIKASI PDDikti</label>
                   <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:'8px'}}>
                     <div>
                       <span className={`status-badge ${detailA.pddikti_status==='TERVERIFIKASI_RESMI'?'sb-green':'sb-amber'}`}>
@@ -1359,59 +1270,64 @@ export default function Home() {
               </div>
 
               {/* Data Collection DP4 (Pengisian Parameter 8 Item) */}
-              <div style={{marginTop:'30px', paddingTop:'20px', borderTop:'1px solid var(--border)'}}>
-                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px'}}>
-                  <label>MANUAL DATA COLLECTION (TUGAS DP 4)</label>
-                  <button className="btn btn-sm btn-outline" onClick={async () => {
-                    try {
-                      await supabase.from('alumni').update({
-                        email: detailForm.email,
-                        no_hp: detailForm.noHp,
-                        sosmed_linkedin: detailForm.sosmed_linkedin,
-                        sosmed_ig: detailForm.sosmed_ig,
-                        sosmed_fb: detailForm.sosmed_fb,
-                        sosmed_tiktok: detailForm.sosmed_tiktok,
-                        tempat_bekerja: detailForm.tempatBekerja,
-                        sosmed_tempat_bekerja: detailForm.sosmed_tempatBekerja,
-                        alamat_bekerja: detailForm.alamatBekerja,
-                        posisi: detailForm.posisi,
-                        jenis_pekerjaan: detailForm.jenisPekerjaan
-                      }).eq('id', detailForm.id);
-                      setAlumni(prev => prev.map(a => a.id === detailForm.id ? detailForm : a));
-                      showToast('Perubahan berhasil disimpan ke database', 'ok');
-                    } catch(e) {
-                      console.error(e);
-                      showToast('Gagal menyimpan perubahan', 'warn');
-                    }
-                  }}>Simpan Perubahan</button>
-                </div>
-                
-                <div className="form-grid" style={{gridTemplateColumns:'1fr 1fr', gap:'16px'}}>
-                  <div><label>Alamat Email</label><input type="email" value={detailForm?.email||''} onChange={e => setDetailForm({...detailForm, email: e.target.value})} placeholder="Alamat email..." /></div>
-                  <div><label>Nomor HP</label><input type="text" value={detailForm?.noHp||''} onChange={e => setDetailForm({...detailForm, noHp: e.target.value})} placeholder="081xxx..." /></div>
+              {projectMode === 'DP4' && (
+                <div style={{marginTop:'30px', paddingTop:'20px', borderTop:'1px solid var(--border)'}}>
+                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px'}}>
+                    <label style={{color:'var(--green)'}}>MANUAL DATA OSINT COLLECTION (TUGAS DP 4)</label>
+                    <button className="btn btn-sm btn-outline" style={{borderColor:'var(--green)', color:'var(--green)'}} onClick={async () => {
+                      try {
+                        let mergedSources = [...(detailForm.sources || [])];
+                        if (!mergedSources.includes('Manual Entry')) mergedSources.push('Manual Entry');
+                        await supabase.from('alumni').update({
+                          email: detailForm.email,
+                          no_hp: detailForm.noHp,
+                          sosmed_linkedin: detailForm.sosmed_linkedin,
+                          sosmed_ig: detailForm.sosmed_ig,
+                          sosmed_fb: detailForm.sosmed_fb,
+                          sosmed_tiktok: detailForm.sosmed_tiktok,
+                          tempat_bekerja: detailForm.tempatBekerja,
+                          sosmed_tempat_bekerja: detailForm.sosmed_tempatBekerja,
+                          alamat_bekerja: detailForm.alamatBekerja,
+                          posisi: detailForm.posisi,
+                          jenis_pekerjaan: detailForm.jenisPekerjaan,
+                          sources: mergedSources
+                        }).eq('id', detailForm.id);
+                        setAlumni(prev => prev.map(a => a.id === detailForm.id ? { ...detailForm, sources: mergedSources } : a));
+                        showToast('Perubahan manual data berhasil disimpan!', 'ok');
+                      } catch(e) {
+                        console.error(e);
+                        showToast('Gagal menyimpan perubahan data', 'warn');
+                      }
+                    }}>Simpan Data Record</button>
+                  </div>
                   
-                  <div><label>LinkedIn</label><input type="text" value={detailForm?.sosmed_linkedin||''} onChange={e => setDetailForm({...detailForm, sosmed_linkedin: e.target.value})} placeholder="URL / Username..." /></div>
-                  <div><label>Instagram</label><input type="text" value={detailForm?.sosmed_ig||''} onChange={e => setDetailForm({...detailForm, sosmed_ig: e.target.value})} placeholder="@username..." /></div>
-                  
-                  <div><label>Facebook</label><input type="text" value={detailForm?.sosmed_fb||''} onChange={e => setDetailForm({...detailForm, sosmed_fb: e.target.value})} placeholder="Nama / URL FB..." /></div>
-                  <div><label>TikTok</label><input type="text" value={detailForm?.sosmed_tiktok||''} onChange={e => setDetailForm({...detailForm, sosmed_tiktok: e.target.value})} placeholder="@username..." /></div>
-                  
-                  <div><label>Tempat Bekerja (Instansi)</label><input type="text" value={detailForm?.tempatBekerja||detailForm?.instansi||''} onChange={e => setDetailForm({...detailForm, tempatBekerja: e.target.value})} placeholder="Nama perusahaan..." /></div>
-                  <div><label>Sosmed Instansi Tempat Kerja</label><input type="text" value={detailForm?.sosmed_tempatBekerja||''} onChange={e => setDetailForm({...detailForm, sosmed_tempatBekerja: e.target.value})} placeholder="Akun institusi..." /></div>
-                  
-                  <div style={{gridColumn:'span 2'}}><label>Alamat Lengkap Kantor</label><input type="text" value={detailForm?.alamatBekerja||''} onChange={e => setDetailForm({...detailForm, alamatBekerja: e.target.value})} placeholder="Alamat fisik perusahaan..." /></div>
-                  
-                  <div><label>Posisi / Jabatan</label><input type="text" value={detailForm?.posisi||detailForm?.jabatan||''} onChange={e => setDetailForm({...detailForm, posisi: e.target.value})} placeholder="Jabatan pekerja..." /></div>
-                  <div><label>Jenis Pekerjaan</label>
-                    <select value={detailForm?.jenisPekerjaan||''} onChange={e => setDetailForm({...detailForm, jenisPekerjaan: e.target.value as any})}>
-                      <option value="">-- Pilih Jenis --</option>
-                      <option value="PNS">PNS</option>
-                      <option value="Swasta">Swasta</option>
-                      <option value="Wirausaha">Wirausaha</option>
-                    </select>
+                  <div className="form-grid" style={{gridTemplateColumns:'1fr 1fr', gap:'16px'}}>
+                    <div><label>Alamat Email</label><input type="email" value={detailForm?.email||''} onChange={e => setDetailForm({...detailForm, email: e.target.value})} placeholder="Alamat email..." /></div>
+                    <div><label>Nomor HP</label><input type="text" value={detailForm?.noHp||''} onChange={e => setDetailForm({...detailForm, noHp: e.target.value})} placeholder="081xxx..." /></div>
+                    
+                    <div><label>LinkedIn</label><input type="text" value={detailForm?.sosmed_linkedin||''} onChange={e => setDetailForm({...detailForm, sosmed_linkedin: e.target.value})} placeholder="URL / Username..." /></div>
+                    <div><label>Instagram</label><input type="text" value={detailForm?.sosmed_ig||''} onChange={e => setDetailForm({...detailForm, sosmed_ig: e.target.value})} placeholder="@username..." /></div>
+                    
+                    <div><label>Facebook</label><input type="text" value={detailForm?.sosmed_fb||''} onChange={e => setDetailForm({...detailForm, sosmed_fb: e.target.value})} placeholder="Nama / URL FB..." /></div>
+                    <div><label>TikTok</label><input type="text" value={detailForm?.sosmed_tiktok||''} onChange={e => setDetailForm({...detailForm, sosmed_tiktok: e.target.value})} placeholder="@username..." /></div>
+                    
+                    <div><label>Tempat Bekerja (Instansi)</label><input type="text" value={detailForm?.tempatBekerja||detailForm?.instansi||''} onChange={e => setDetailForm({...detailForm, tempatBekerja: e.target.value})} placeholder="Nama perusahaan..." /></div>
+                    <div><label>Sosmed Instansi Tempat Kerja</label><input type="text" value={detailForm?.sosmed_tempatBekerja||''} onChange={e => setDetailForm({...detailForm, sosmed_tempatBekerja: e.target.value})} placeholder="Akun institusi..." /></div>
+                    
+                    <div style={{gridColumn:'span 2'}}><label>Alamat Lengkap Kantor</label><input type="text" value={detailForm?.alamatBekerja||''} onChange={e => setDetailForm({...detailForm, alamatBekerja: e.target.value})} placeholder="Alamat fisik perusahaan..." /></div>
+                    
+                    <div><label>Posisi / Jabatan</label><input type="text" value={detailForm?.posisi||detailForm?.jabatan||''} onChange={e => setDetailForm({...detailForm, posisi: e.target.value})} placeholder="Jabatan pekerja..." /></div>
+                    <div><label>Jenis Pekerjaan</label>
+                      <select value={detailForm?.jenisPekerjaan||''} onChange={e => setDetailForm({...detailForm, jenisPekerjaan: e.target.value as any})}>
+                        <option value="">-- Pilih Jenis --</option>
+                        <option value="PNS">PNS</option>
+                        <option value="Swasta">Swasta</option>
+                        <option value="Wirausaha">Wirausaha</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
             </div>
           </div>
