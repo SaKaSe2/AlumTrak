@@ -911,6 +911,7 @@ export default function Home() {
                       <option value={1000}>Batasi: 1,000 Data</option>
                       <option value={5000}>Batasi: 5,000 Data</option>
                       <option value={10000}>Batasi: 10,000 Data</option>
+                      <option value={150000}>Buka Semua Data (142,000+ Excel)</option>
                     </select>
                   </div>
                   <div style={{overflowX: 'auto'}}>
@@ -960,6 +961,25 @@ export default function Home() {
                           </div>
                           <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
                             <input type="checkbox" checked={true} readOnly style={{accentColor:'var(--accent)', width:'16px', height:'16px', flexShrink:0}} />
+                            <span style={{fontSize:'13px', minWidth:'110px', color:'var(--text-muted)'}}>Sumber Target:</span>
+                            <select 
+                              style={{padding:'8px 12px', fontSize:'13px', background:'rgba(0,0,0,0.3)', width: '100%'}}
+                              defaultValue="supabase"
+                              onChange={(e) => {
+                                if(e.target.value === 'dp3') {
+                                  setAlumni([]);
+                                  showToast('Menggunakan mode data sesi lokal DP3 (Kosong).', 'warn');
+                                } else {
+                                  fetchAlumniFromSupabase('', filterAlumni, searchNim, searchTahun, dataLimit);
+                                }
+                              }}
+                            >
+                              <option value="supabase">Data Master Excel (Supabase DB)</option>
+                              <option value="dp3">Data Mentah PDDikti (Sesi Lokal DP3)</option>
+                            </select>
+                          </div>
+                          <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+                            <input type="checkbox" checked={true} readOnly style={{accentColor:'var(--accent)', width:'16px', height:'16px', flexShrink:0}} />
                             <span style={{fontSize:'13px', minWidth:'110px', color:'var(--text-muted)'}}>Batasi Kuota:</span>
                             <select 
                               style={{padding:'8px 12px', fontSize:'13px', background:'rgba(0,0,0,0.3)', width: '100%'}}
@@ -973,6 +993,7 @@ export default function Home() {
                               <option value={1000}>Maks. 1,000 Data</option>
                               <option value={5000}>Maks. 5,000 Data</option>
                               <option value={10000}>Maks. 10,000 Data</option>
+                              <option value={150000}>Buka Semua Data (142,000+ Excel)</option>
                             </select>
                           </div>
                           <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
