@@ -11,8 +11,8 @@ Sesuai dengan instruksi tugas akhir Daily Project 3 (Produk Web):
 
 ### Kredensial Login (Untuk Akses Penilaian & Pengujian)
 Silakan gunakan akun berikut untuk masuk ke dashboard sistem jika aplikasi meminta autentikasi:
-- **Username / Email**: `admin`
-- **Password**: `umm2026`
+- **Username / Email**: `testing`
+- **Password**: `testinG321..`
 
 *(Catatan: Proyek ini dibangun sebagai aplikasi berbasis Web responsif yang dapat diakses di Desktop maupun Mobile Browser. Oleh karena itu, tidak ada terbitan APK standalone untuk versi Mobile).*
 
