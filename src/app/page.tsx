@@ -694,7 +694,7 @@ export default function Home() {
           <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'24px'}}>
             {/* DP3 Card */}
             <div className="card" style={{cursor:'pointer', transition:'all 0.3s ease', border:'1px solid var(--border)'}} 
-                 onClick={() => { setProjectMode('DP3'); setView('app'); window.scrollTo(0,0); }}
+                 onClick={() => { setProjectMode('DP3'); setPage('dashboard'); setView('app'); window.scrollTo(0,0); }}
                  onMouseOver={(e)=>e.currentTarget.style.borderColor='var(--accent)'}
                  onMouseOut={(e)=>e.currentTarget.style.borderColor='var(--border)'}>
               <div className="card-body" style={{padding:'40px'}}>
@@ -711,7 +711,7 @@ export default function Home() {
 
             {/* DP4 Card */}
             <div className="card" style={{cursor:'pointer', transition:'all 0.3s ease', border:'1px solid var(--border)'}} 
-                 onClick={() => { setProjectMode('DP4'); setView('app'); window.scrollTo(0,0); }}
+                 onClick={() => { setProjectMode('DP4'); setPage('tracking'); setView('app'); window.scrollTo(0,0); }}
                  onMouseOver={(e)=>e.currentTarget.style.borderColor='var(--green)'}
                  onMouseOut={(e)=>e.currentTarget.style.borderColor='var(--border)'}>
               <div className="card-body" style={{padding:'40px'}}>
@@ -750,21 +750,29 @@ export default function Home() {
             <div className="mono" style={{fontSize: '10px', color: projectMode==='DP4'?'var(--green)':'var(--accent)', letterSpacing: '1.5px', fontWeight:600}}>[MODE: {projectMode === 'DP3' ? 'PROJECT 3' : 'PROJECT 4'}]</div>
           </div>
           <nav className="nav-menu">
-            <div className="nav-label">Main System</div>
-            <button className={`nav-item ${page==='dashboard'?'active':''}`} onClick={()=>setPage('dashboard')}>🏢 Dashboard</button>
-            <button className={`nav-item ${page==='alumni'?'active':''}`} onClick={()=>setPage('alumni')}>👥 Data Master Alumni</button>
+            {projectMode === 'DP3' && (
+              <>
+                <div className="nav-label">Main System</div>
+                <button className={`nav-item ${page==='dashboard'?'active':''}`} onClick={()=>setPage('dashboard')}>🏢 Dashboard</button>
+                <button className={`nav-item ${page==='alumni'?'active':''}`} onClick={()=>setPage('alumni')}>👥 Data Master Alumni</button>
+              </>
+            )}
             
-            <div className="nav-label">Tracking Engine</div>
-            <button className={`nav-item ${page==='tracking'?'active':''}`} onClick={()=>setPage('tracking')}>
-              ⚡ Jalankan Pelacakan
-              {pendingCount > 0 && <span style={{background:'var(--accent)', color:'#000', padding:'2px 6px', borderRadius:'4px', fontSize:'10px', marginLeft:'auto'}}>{pendingCount}</span>}
-            </button>
-            <button className={`nav-item ${page==='results'?'active':''}`} onClick={()=>setPage('results')}>📋 Hasil Identifikasi</button>
-            <button className={`nav-item ${page==='evidence'?'active':''}`} onClick={()=>setPage('evidence')}>🗂️ Jejak Bukti OSINT</button>
+            {projectMode === 'DP4' && (
+              <>
+                <div className="nav-label">Tracking Engine</div>
+                <button className={`nav-item ${page==='tracking'?'active':''}`} onClick={()=>setPage('tracking')}>
+                  ⚡ Jalankan Pelacakan
+                  {pendingCount > 0 && <span style={{background:'var(--accent)', color:'#000', padding:'2px 6px', borderRadius:'4px', fontSize:'10px', marginLeft:'auto'}}>{pendingCount}</span>}
+                </button>
+                <button className={`nav-item ${page==='results'?'active':''}`} onClick={()=>setPage('results')}>📋 Hasil Identifikasi</button>
+                <button className={`nav-item ${page==='evidence'?'active':''}`} onClick={()=>setPage('evidence')}>🗂️ Jejak Bukti OSINT</button>
 
-            <div className="nav-label">Configuration</div>
-            <button className={`nav-item ${page==='sources'?'active':''}`} onClick={()=>setPage('sources')}>🌐 Sumber Data Publik</button>
-            <button className={`nav-item ${page==='reports'?'active':''}`} onClick={()=>setPage('reports')}>📊 Laporan & ISO 25010</button>
+                <div className="nav-label">Configuration</div>
+                <button className={`nav-item ${page==='sources'?'active':''}`} onClick={()=>setPage('sources')}>🌐 Sumber Data Publik</button>
+                <button className={`nav-item ${page==='reports'?'active':''}`} onClick={()=>setPage('reports')}>📊 Laporan & ISO 25010</button>
+              </>
+            )}
           </nav>
           <div style={{padding: '24px', borderTop: '1px solid var(--border)'}}>
             <button onClick={() => { setProjectMode(null); setView('selection'); window.scrollTo(0,0); }} className="btn btn-outline btn-sm w-full"><span style={{fontFamily:"'JetBrains Mono',monospace",letterSpacing:'1px'}}>&larr; TUKAR MODE PROYEK</span></button>
@@ -774,7 +782,9 @@ export default function Home() {
         <main className="main-content">
           <header className="app-header">
             <div className="page-title">{page.toUpperCase()}</div>
-            <button className="btn btn-sm" onClick={()=>setModal('addModal')}><span>+ TAMBAH ALUMNI</span></button>
+            {projectMode === 'DP3' && (
+              <button className="btn btn-sm" onClick={()=>setModal('addModal')}><span>+ TAMBAH ALUMNI</span></button>
+            )}
           </header>
 
           <div className="app-body">
