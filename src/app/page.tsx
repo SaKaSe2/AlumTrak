@@ -176,6 +176,38 @@ export default function Home() {
   const [covActiveSearch, setCovActiveSearch] = useState('');
   const [covLoading, setCovLoading] = useState(false);
 
+  // QA Sample States (2015+)
+  const [qaSample, setQaSample] = useState<any[]>([]);
+  const [qaSampleLoading, setQaSampleLoading] = useState(false);
+
+  useEffect(() => {
+    if (page === 'reports' && projectMode === 'DP4') {
+      const loadQa = async () => {
+        setQaSampleLoading(true);
+        const { data, error } = await supabase.from('alumni')
+          .select('*')
+          .gte('tahun_masuk', '2015')
+          .limit(500);
+          
+        if (data && !error) {
+           const mappedData = data.map((d: any) => ({
+             id: d.id, nim: d.nim || '', nama: d.nama,
+             email: d.email || '', noHp: d.no_hp || '', 
+             sosmed_linkedin: d.sosmed_linkedin || '', sosmed_ig: d.sosmed_ig || '', sosmed_fb: d.sosmed_fb || '', sosmed_tiktok: d.sosmed_tiktok || '',
+             tempatBekerja: d.tempat_bekerja || '', tglUpdate: d.updated_at,
+             alamatBekerja: d.alamat_bekerja || '',
+             posisi: d.posisi || '', jenisPekerjaan: d.jenis_pekerjaan || '',
+             sosmed_tempatBekerja: d.sosmed_tempat_bekerja || '',
+             jabatan: d.jabatan || '', instansi: d.instansi || '', status: d.status, pddikti_status: d.pddikti_status
+           }));
+           setQaSample(mappedData);
+        }
+        setQaSampleLoading(false);
+      };
+      if (qaSample.length === 0) loadQa();
+    }
+  }, [page, projectMode, qaSample.length]);
+
   useEffect(() => {
     if (page === 'reports' && projectMode === 'DP4' && evalCoverage) {
       const load = async () => {
@@ -1183,26 +1215,26 @@ export default function Home() {
               // Gunakan totalAlumniDB sebagai acuan coverage
               const realCoverage = totalAlumniDB;
               
-              // Hitung Completeness (rata-rata field terisi per alumni)
+              // Hitung Completeness (rata-rata field terisi per alumni) dari qaSample (angkatan >= 2015)
               const completenessFields = ['email', 'noHp', 'sosmed_linkedin', 'tempatBekerja', 'posisi', 'jenisPekerjaan', 'alamatBekerja', 'sosmed_tempatBekerja'];
               let totalFieldsFilled = 0;
-              let sampleSize = Math.min(alumni.length, 500);
-              const sampleAlumni = alumni.slice(0, sampleSize);
-              sampleAlumni.forEach(a => {
+              let sampleSize = Math.min(qaSample.length, 500);
+              const sampleAlumni = qaSample.slice(0, sampleSize);
+              sampleAlumni.forEach((a: any) => {
                 let filled = 0;
                 completenessFields.forEach(f => {
-                  if ((a as any)[f] && (a as any)[f] !== '' && (a as any)[f] !== null) filled++;
+                  if (a[f] && a[f] !== '' && a[f] !== null) filled++;
                 });
                 totalFieldsFilled += filled;
               });
               const avgFieldsFilled = sampleSize > 0 ? totalFieldsFilled / sampleSize : 0;
               
-              // Estimasi Accuracy (berdasarkan field yang terisi dan konsisten)
+              // Estimasi Accuracy (berdasarkan field yang terisi dan konsisten) di qaSample
               let accurateCount = 0;
-              sampleAlumni.forEach(a => {
+              sampleAlumni.forEach((a: any) => {
                 let filled = 0;
                 completenessFields.forEach(f => {
-                  if ((a as any)[f] && (a as any)[f] !== '' && (a as any)[f] !== null) filled++;
+                  if (a[f] && a[f] !== '' && a[f] !== null) filled++;
                 });
                 if (filled >= 2) accurateCount++;
               });
@@ -1465,8 +1497,11 @@ export default function Home() {
                             </tr>
                           )
                         })}
-                        {sampleSize === 0 && (
-                          <tr><td colSpan={5} style={{textAlign:'center', padding:'32px', color:'var(--text-muted)'}}>Sistem Sedang Menyiapkan Sampel Data... Pastikan Filter Batasan Target mencakup data.</td></tr>
+                        {sampleSize === 0 && qaSampleLoading && (
+                          <tr><td colSpan={5} style={{textAlign:'center', padding:'32px', color:'var(--text-muted)'}}>Menarik paket sampel data (Angkatan {'>='} 2015)...</td></tr>
+                        )}
+                        {sampleSize === 0 && !qaSampleLoading && (
+                          <tr><td colSpan={5} style={{textAlign:'center', padding:'32px', color:'var(--text-muted)'}}>Gagal menemukan sampel 2015+.</td></tr>
                         )}
                       </tbody>
                     </table>
