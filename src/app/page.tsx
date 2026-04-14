@@ -160,9 +160,14 @@ export default function Home() {
   const [filterAlumni, setFilterAlumni] = useState('');
   const [searchNim, setSearchNim] = useState('');
   const [searchTahun, setSearchTahun] = useState('');
-  const [dataLimit, setDataLimit] = useState<number>(50);
+  const [dataLimit, setDataLimit] = useState<number>(500);
   const [useNim, setUseNim] = useState(false);
   const [useTahun, setUseTahun] = useState(false);
+  
+  // Custom Filters for DP4 Report
+  const [evalCoverage, setEvalCoverage] = useState(true);
+  const [evalAccuracy, setEvalAccuracy] = useState(true);
+  const [evalCompleteness, setEvalCompleteness] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -1197,9 +1202,24 @@ export default function Home() {
               const coverageScore = getCoverageScore(realCoverage);
               const accuracyScore = getAccuracyScore(accurateCount);
               const completenessScore = getCompletenessScore(avgFieldsFilled);
-              const nilaiAkhir = (coverageScore * 0.4) + (accuracyScore * 0.4) + (completenessScore * 0.2);
+              // Hitung Bobot Aktif
+              let totalWeight = 0;
+              if (evalCoverage) totalWeight += 0.4;
+              if (evalAccuracy) totalWeight += 0.4;
+              if (evalCompleteness) totalWeight += 0.2;
+
+              let nilaiAkhir = 0;
+              if (totalWeight > 0) {
+                const weightedCoverage = evalCoverage ? (coverageScore * 0.4) : 0;
+                const weightedAccuracy = evalAccuracy ? (accuracyScore * 0.4) : 0;
+                const weightedComp = evalCompleteness ? (completenessScore * 0.2) : 0;
+                
+                // Normalisasi nilai agar maksimal tetap 100 jika ada filter yang dimatikan
+                nilaiAkhir = (weightedCoverage + weightedAccuracy + weightedComp) / totalWeight;
+              }
 
               const getGrade = (score: number) => {
+                if (totalWeight === 0) return { grade: 'N/A', color: 'var(--text-muted)' };
                 if (score >= 91) return { grade: 'A', color: 'var(--green)' };
                 if (score >= 81) return { grade: 'A-', color: 'var(--green)' };
                 if (score >= 71) return { grade: 'B+', color: 'var(--accent)' };
@@ -1211,24 +1231,49 @@ export default function Home() {
 
               return (
               <div className="app-page active">
-                <h2 style={{fontSize: '24px'}}>Rubrik Penilaian Daily Project 4</h2>
-                <p className="mono text-sm mb-6">Evaluasi real-time berdasarkan formula penilaian dosen</p>
-
-                {/* Nilai Akhir Besar */}
-                <div className="card" style={{marginBottom:'24px', borderColor: gradeInfo.color, borderWidth:'2px'}}>
-                  <div className="card-body" style={{textAlign:'center', padding:'40px'}}>
-                    <div className="mono" style={{fontSize:'12px', color:'var(--text-muted)', marginBottom:'8px', letterSpacing:'2px'}}>ESTIMASI NILAI AKHIR</div>
-                    <div style={{fontSize:'72px', fontWeight:700, color: gradeInfo.color, lineHeight:1}}>{nilaiAkhir.toFixed(1)}</div>
-                    <div style={{fontSize:'32px', fontWeight:600, color: gradeInfo.color, marginTop:'8px'}}>Grade: {gradeInfo.grade}</div>
-                    <div className="mono" style={{fontSize:'11px', color:'var(--text-muted)', marginTop:'16px'}}>
-                      Formula: (Coverage x 0.4) + (Accuracy x 0.4) + (Completeness x 0.2)
-                    </div>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom: '24px'}}>
+                  <div>
+                    <h2 style={{fontSize: '24px'}}>Rubrik Penilaian Daily Project 4</h2>
+                    <p className="mono text-sm">Evaluasi real-time berdasarkan formula penilaian dosen</p>
+                  </div>
+                  <div style={{background:'rgba(255,255,255,0.02)', border:'1px solid var(--border)', padding:'12px', borderRadius:'8px', display:'flex', gap:'16px'}}>
+                    <label style={{display:'flex', alignItems:'center', gap:'8px', cursor:'pointer'}}>
+                      <input type="checkbox" checked={evalCoverage} onChange={(e)=>setEvalCoverage(e.target.checked)} style={{accentColor:'var(--accent)', width:'16px', height:'16px'}} />
+                      <span className="mono" style={{fontSize:'12px'}}>Coverage (40%)</span>
+                    </label>
+                    <label style={{display:'flex', alignItems:'center', gap:'8px', cursor:'pointer'}}>
+                      <input type="checkbox" checked={evalAccuracy} onChange={(e)=>setEvalAccuracy(e.target.checked)} style={{accentColor:'var(--accent)', width:'16px', height:'16px'}} />
+                      <span className="mono" style={{fontSize:'12px'}}>Accuracy (40%)</span>
+                    </label>
+                    <label style={{display:'flex', alignItems:'center', gap:'8px', cursor:'pointer'}}>
+                      <input type="checkbox" checked={evalCompleteness} onChange={(e)=>setEvalCompleteness(e.target.checked)} style={{accentColor:'var(--accent)', width:'16px', height:'16px'}} />
+                      <span className="mono" style={{fontSize:'12px'}}>Completeness (20%)</span>
+                    </label>
                   </div>
                 </div>
+
+                {/* Nilai Akhir Besar */}
+                {totalWeight > 0 ? (
+                  <div className="card" style={{marginBottom:'24px', borderColor: gradeInfo.color, borderWidth:'2px', transition:'all 0.3s ease'}}>
+                    <div className="card-body" style={{textAlign:'center', padding:'40px'}}>
+                      <div className="mono" style={{fontSize:'12px', color:'var(--text-muted)', marginBottom:'8px', letterSpacing:'2px'}}>ESTIMASI NILAI AKHIR</div>
+                      <div style={{fontSize:'72px', fontWeight:700, color: gradeInfo.color, lineHeight:1}}>{nilaiAkhir.toFixed(1)}</div>
+                      <div style={{fontSize:'32px', fontWeight:600, color: gradeInfo.color, marginTop:'8px'}}>Grade: {gradeInfo.grade}</div>
+                      <div className="mono" style={{fontSize:'11px', color:'var(--text-muted)', marginTop:'16px'}}>
+                        Formula Normalisasi: (Total Poin Aktif) / Bobot Aktif {(totalWeight*100).toFixed(0)}%
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="card" style={{marginBottom:'24px', padding:'40px', textAlign:'center'}}>
+                    <div className="mono" style={{color:'var(--text-muted)'}}>Pilih minimal satu komponen penilaian untuk merender kalkulasi rubrik.</div>
+                  </div>
+                )}
 
                 {/* Detail 3 Komponen */}
                 <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'20px', marginBottom:'24px'}}>
                   {/* Coverage */}
+                  {evalCoverage && (
                   <div className="card" style={{marginBottom:0}}>
                     <div className="card-header"><span className="card-title">Coverage (40%)</span></div>
                     <div className="card-body" style={{textAlign:'center'}}>
@@ -1245,8 +1290,10 @@ export default function Home() {
                       </div>
                     </div>
                   </div>
+                  )}
 
                   {/* Accuracy */}
+                  {evalAccuracy && (
                   <div className="card" style={{marginBottom:0}}>
                     <div className="card-header"><span className="card-title">Accuracy (40%)</span></div>
                     <div className="card-body" style={{textAlign:'center'}}>
@@ -1263,8 +1310,10 @@ export default function Home() {
                       </div>
                     </div>
                   </div>
+                  )}
 
                   {/* Completeness */}
+                  {evalCompleteness && (
                   <div className="card" style={{marginBottom:0}}>
                     <div className="card-header"><span className="card-title">Completeness (20%)</span></div>
                     <div className="card-body" style={{textAlign:'center'}}>
@@ -1281,14 +1330,16 @@ export default function Home() {
                       </div>
                     </div>
                   </div>
+                  )}
                 </div>
 
                 {/* Tabel Rubrik Detail */}
-                <div className="card">
+                <div className="card" style={{display: totalWeight > 0 ? 'block' : 'none'}}>
                   <div className="card-header"><span className="card-title">Detail Rubrik Penilaian Dosen</span></div>
                   <table style={{width:'100%'}}>
-                    <thead><tr><th>Komponen</th><th>Bobot</th><th>Indikator</th><th>Skor Anda</th><th>Kontribusi Nilai</th></tr></thead>
+                    <thead><tr><th>Komponen</th><th>Bobot</th><th>Indikator</th><th>Skor Anda</th><th>Kontribusi Poin</th></tr></thead>
                     <tbody>
+                      {evalCoverage && (
                       <tr>
                         <td><strong>Coverage</strong><div className="mono" style={{fontSize:'10px',color:'var(--text-muted)'}}>Jumlah data ditemukan</div></td>
                         <td>40%</td>
@@ -1296,6 +1347,8 @@ export default function Home() {
                         <td><span className={`status-badge ${coverageScore >= 85 ? 'sb-green' : coverageScore >= 61 ? 'sb-amber' : 'sb-red'}`}>{coverageScore}/100</span></td>
                         <td className="mono" style={{fontWeight:600}}>{(coverageScore * 0.4).toFixed(1)}</td>
                       </tr>
+                      )}
+                      {evalAccuracy && (
                       <tr>
                         <td><strong>Accuracy</strong><div className="mono" style={{fontSize:'10px',color:'var(--text-muted)'}}>Cek acak 500 data</div></td>
                         <td>40%</td>
@@ -1303,6 +1356,8 @@ export default function Home() {
                         <td><span className={`status-badge ${accuracyScore >= 82 ? 'sb-green' : accuracyScore >= 62 ? 'sb-amber' : 'sb-red'}`}>{accuracyScore}/100</span></td>
                         <td className="mono" style={{fontWeight:600}}>{(accuracyScore * 0.4).toFixed(1)}</td>
                       </tr>
+                      )}
+                      {evalCompleteness && (
                       <tr>
                         <td><strong>Completeness</strong><div className="mono" style={{fontSize:'10px',color:'var(--text-muted)'}}>Kelengkapan field</div></td>
                         <td>20%</td>
@@ -1310,12 +1365,17 @@ export default function Home() {
                         <td><span className={`status-badge ${completenessScore >= 78 ? 'sb-green' : completenessScore >= 60 ? 'sb-amber' : 'sb-red'}`}>{completenessScore}/100</span></td>
                         <td className="mono" style={{fontWeight:600}}>{(completenessScore * 0.2).toFixed(1)}</td>
                       </tr>
+                      )}
+                      <tr style={{background:'rgba(255,255,255,0.02)', borderTop:'1px solid var(--border)'}}>
+                        <td colSpan={4} style={{textAlign:'right', paddingRight:'20px'}}><strong>TOTAL POINT (Normalisasi):</strong></td>
+                        <td className="mono" style={{fontWeight:700, fontSize:'16px', color:'var(--green)'}}>{nilaiAkhir.toFixed(1)}</td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>
 
                 {/* Tabel Data Manual QA */}
-                <div className="card" style={{marginTop:'24px'}}>
+                <div className="card" style={{marginTop:'24px', display: (evalAccuracy || evalCompleteness) ? 'block' : 'none'}}>
                   <div className="card-header">
                     <span className="card-title">Data Sampling Validasi Evaluator ({sampleSize} Baris)</span>
                   </div>
@@ -1324,10 +1384,10 @@ export default function Home() {
                       <thead style={{position: 'sticky', top: 0, background: 'var(--bg)', zIndex: 1, boxShadow: '0 1px 0 var(--border)'}}>
                         <tr>
                           <th style={{padding: '12px'}}>NIM / Nama</th>
-                          <th style={{padding: '12px'}}>Kelengkapan</th>
+                          {evalCompleteness && <th style={{padding: '12px'}}>Kelengkapan</th>}
                           <th style={{padding: '12px'}}>Kontak (Email/HP)</th>
                           <th style={{padding: '12px'}}>Karier (Posisi/Instansi)</th>
-                          <th style={{padding: '12px'}}>Sosial Media (Validasi)</th>
+                          {evalAccuracy && <th style={{padding: '12px'}}>Sosial Media (Validasi)</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -1339,9 +1399,11 @@ export default function Home() {
                           return (
                             <tr key={i} style={{borderBottom: '1px solid var(--border)'}}>
                               <td style={{padding: '12px'}}><div style={{fontWeight:600}}>{a.nama}</div><div className="mono" style={{fontSize:'11px', color:'var(--text-muted)'}}>{a.nim}</div></td>
-                              <td style={{padding: '12px'}}>
-                                <span className={`status-badge ${filled >= 4 ? 'sb-green' : filled >= 2 ? 'sb-amber' : 'sb-red'}`}>{filled}/8 Field</span>
-                              </td>
+                              {evalCompleteness && (
+                                <td style={{padding: '12px'}}>
+                                  <span className={`status-badge ${filled >= 4 ? 'sb-green' : filled >= 2 ? 'sb-amber' : 'sb-red'}`}>{filled}/8 Field</span>
+                                </td>
+                              )}
                               <td style={{padding: '12px'}}>
                                 {(a.email || a.noHp) ? (
                                   <>
@@ -1358,6 +1420,7 @@ export default function Home() {
                                   </>
                                 ) : <span style={{color:'var(--text-muted)'}}>-</span>}
                               </td>
+                              {evalAccuracy && (
                               <td style={{padding: '12px'}}>
                                 {a.sosmed_linkedin && <a href={a.sosmed_linkedin.startsWith('http') ? a.sosmed_linkedin : `https://${a.sosmed_linkedin}`} target="_blank" rel="noopener noreferrer" style={{color:'#0a66c2',marginRight:'8px',textDecoration:'none',fontWeight:500}}>LinkedIn</a>}
                                 {a.sosmed_ig && <a href={a.sosmed_ig.startsWith('http') ? a.sosmed_ig : `https://${a.sosmed_ig}`} target="_blank" rel="noopener noreferrer" style={{color:'#E1306C',marginRight:'8px',textDecoration:'none',fontWeight:500}}>IG</a>}
@@ -1365,6 +1428,7 @@ export default function Home() {
                                 {a.sosmed_tiktok && <a href={a.sosmed_tiktok.startsWith('http') ? a.sosmed_tiktok : `https://${a.sosmed_tiktok}`} target="_blank" rel="noopener noreferrer" style={{color:'#ff0050',marginRight:'8px',textDecoration:'none',fontWeight:500}}>TikTok</a>}
                                 {(!a.sosmed_linkedin && !a.sosmed_ig && !a.sosmed_fb && !a.sosmed_tiktok) && <span style={{color:'var(--text-muted)'}}>-</span>}
                               </td>
+                              )}
                             </tr>
                           )
                         })}
