@@ -180,10 +180,22 @@ export default function Home() {
     if (page === 'reports' && projectMode === 'DP4' && evalCoverage) {
       const load = async () => {
         setCovLoading(true);
-        let q = supabase.from('alumni').select('nim, nama, prodi, status');
+        let q = supabase.from('alumni').select('id, nim, nama, program_studi, status');
         if (covActiveSearch) q = q.ilike('nama', `%${covActiveSearch}%`);
-        const { data } = await q.range(covPage * 50, (covPage + 1) * 50 - 1).order('id');
-        if (data) setCovData(data);
+        const { data, error } = await q.range(covPage * 50, (covPage + 1) * 50 - 1).order('id');
+        if (error) {
+          console.error("Fetch coverage error:", error);
+        }
+        if (data) {
+          const mapped = data.map((d:any) => ({
+            id: d.id,
+            nim: d.nim,
+            nama: d.nama,
+            prodi: d.program_studi,
+            status: d.status
+          }));
+          setCovData(mapped);
+        }
         setCovLoading(false);
       };
       load();
