@@ -169,6 +169,27 @@ export default function Home() {
   const [evalAccuracy, setEvalAccuracy] = useState(true);
   const [evalCompleteness, setEvalCompleteness] = useState(true);
 
+  // Coverage Explorer States
+  const [covData, setCovData] = useState<any[]>([]);
+  const [covPage, setCovPage] = useState(0);
+  const [covSearchString, setCovSearchString] = useState('');
+  const [covActiveSearch, setCovActiveSearch] = useState('');
+  const [covLoading, setCovLoading] = useState(false);
+
+  useEffect(() => {
+    if (page === 'reports' && projectMode === 'DP4' && evalCoverage) {
+      const load = async () => {
+        setCovLoading(true);
+        let q = supabase.from('alumni').select('nim, nama, prodi, status');
+        if (covActiveSearch) q = q.ilike('nama', `%${covActiveSearch}%`);
+        const { data } = await q.range(covPage * 50, (covPage + 1) * 50 - 1).order('id');
+        if (data) setCovData(data);
+        setCovLoading(false);
+      };
+      load();
+    }
+  }, [page, projectMode, evalCoverage, covPage, covActiveSearch]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (isLoaded) fetchAlumniFromSupabase(searchAlumni, filterAlumni, searchNim, searchTahun, dataLimit);
@@ -1437,6 +1458,64 @@ export default function Home() {
                         )}
                       </tbody>
                     </table>
+                  </div>
+                </div>
+
+                {/* Tabel Coverage Explorer (Semua Data 140k Paginasi) */}
+                <div className="card" style={{marginTop:'24px', display: evalCoverage ? 'block' : 'none'}}>
+                  <div className="card-header" style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                    <span className="card-title">Coverage Server Explorer ({totalAlumniDB.toLocaleString()} Data PDDikti)</span>
+                    <div style={{display:'flex', gap:'8px', alignItems:'center'}}>
+                      <input 
+                        type="text" 
+                        placeholder="Cari nama alumni..." 
+                        style={{padding:'6px 12px', fontSize:'12px', width:'200px', background:'rgba(0,0,0,0.2)', border:'1px solid var(--border)', color:'var(--text)', borderRadius:'4px'}}
+                        value={covSearchString}
+                        onChange={(e)=>setCovSearchString(e.target.value)}
+                        onKeyDown={(e)=>{if(e.key==='Enter'){setCovPage(0); setCovActiveSearch(covSearchString);}}}
+                      />
+                      <button className="btn btn-outline btn-sm" onClick={()=>{setCovPage(0); setCovActiveSearch(covSearchString);}}>CARI</button>
+                    </div>
+                  </div>
+                  <div className="card-body" style={{overflowX: 'auto', maxHeight: '500px', padding: 0}}>
+                    {covLoading ? (
+                      <div style={{padding:'40px', textAlign:'center', color:'var(--text-muted)'}}>Menarik paket data dari Supabase Cloud... Mohon tunggu.</div>
+                    ) : (
+                      <table style={{width: '100%', fontSize: '13px', borderCollapse: 'collapse'}}>
+                        <thead style={{position: 'sticky', top: 0, background: 'var(--bg)', zIndex: 1, boxShadow: '0 1px 0 var(--border)'}}>
+                          <tr>
+                            <th style={{padding: '12px'}}>No.</th>
+                            <th style={{padding: '12px'}}>NIM</th>
+                            <th style={{padding: '12px'}}>Nama Profil Verifikasi</th>
+                            <th style={{padding: '12px'}}>Program Studi</th>
+                            <th style={{padding: '12px'}}>Status Target</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {covData.map((c, i) => (
+                            <tr key={i} style={{borderBottom: '1px solid var(--border)'}}>
+                              <td style={{padding: '12px'}} className="mono">{covPage * 50 + i + 1}</td>
+                              <td style={{padding: '12px'}} className="mono"><span style={{color:'var(--text-muted)'}}>{c.nim}</span></td>
+                              <td style={{padding: '12px'}}><span style={{fontWeight:600}}>{c.nama}</span></td>
+                              <td style={{padding: '12px'}}>{c.prodi}</td>
+                              <td style={{padding: '12px'}}><span className={`status-badge ${c.status === 'Teridentifikasi' ? 'sb-green' : c.status === 'Perlu Verifikasi' ? 'sb-amber' : 'sb-gray'}`}>{c.status || 'Belum Dilacak'}</span></td>
+                            </tr>
+                          ))}
+                          {covData.length === 0 && (
+                            <tr><td colSpan={5} style={{textAlign:'center', padding:'32px', color:'var(--text-muted)'}}>Basis data tidak menemukan nama ini dalam {totalAlumniDB.toLocaleString()} records.</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                  <div className="card-footer" style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px', borderTop:'1px solid var(--border)', background:'rgba(255,255,255,0.01)'}}>
+                    <span className="mono" style={{fontSize:'11px', color:'var(--text-muted)'}}>
+                      Menampilkan baris {covPage * 50 + 1} - {Math.min((covPage + 1) * 50, totalAlumniDB)} via Server-Side Pagination
+                    </span>
+                    <div style={{display:'flex', gap:'8px'}}>
+                      <button className="btn btn-outline btn-sm" disabled={covPage === 0} onClick={()=>setCovPage(p => p - 1)}>&larr; Prev Page</button>
+                      <button className="btn btn-outline btn-sm" disabled={covData.length < 50} onClick={()=>setCovPage(p => p + 1)}>Next Page &rarr;</button>
+                    </div>
                   </div>
                 </div>
 
