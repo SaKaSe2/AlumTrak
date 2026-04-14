@@ -1313,6 +1313,69 @@ export default function Home() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Tabel Data Manual QA */}
+                <div className="card" style={{marginTop:'24px'}}>
+                  <div className="card-header">
+                    <span className="card-title">Data Sampling Validasi Evaluator ({sampleSize} Baris)</span>
+                  </div>
+                  <div className="card-body" style={{overflowX: 'auto', maxHeight: '500px', padding: 0}}>
+                    <table style={{width: '100%', fontSize: '13px', borderCollapse: 'collapse'}}>
+                      <thead style={{position: 'sticky', top: 0, background: 'var(--bg)', zIndex: 1, boxShadow: '0 1px 0 var(--border)'}}>
+                        <tr>
+                          <th style={{padding: '12px'}}>NIM / Nama</th>
+                          <th style={{padding: '12px'}}>Kelengkapan</th>
+                          <th style={{padding: '12px'}}>Kontak (Email/HP)</th>
+                          <th style={{padding: '12px'}}>Karier (Posisi/Instansi)</th>
+                          <th style={{padding: '12px'}}>Sosial Media (Validasi)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sampleAlumni.map((a, i) => {
+                          let filled = 0;
+                          completenessFields.forEach(f => {
+                             if ((a as any)[f] && (a as any)[f] !== '' && (a as any)[f] !== null) filled++;
+                          });
+                          return (
+                            <tr key={i} style={{borderBottom: '1px solid var(--border)'}}>
+                              <td style={{padding: '12px'}}><div style={{fontWeight:600}}>{a.nama}</div><div className="mono" style={{fontSize:'11px', color:'var(--text-muted)'}}>{a.nim}</div></td>
+                              <td style={{padding: '12px'}}>
+                                <span className={`status-badge ${filled >= 4 ? 'sb-green' : filled >= 2 ? 'sb-amber' : 'sb-red'}`}>{filled}/8 Field</span>
+                              </td>
+                              <td style={{padding: '12px'}}>
+                                {(a.email || a.noHp) ? (
+                                  <>
+                                    {a.email && <div style={{marginBottom:'4px'}}>{a.email}</div>}
+                                    {a.noHp && <div className="mono" style={{color:'var(--text-muted)', fontSize:'12px'}}>{a.noHp}</div>}
+                                  </>
+                                ) : <span style={{color:'var(--text-muted)'}}>-</span>}
+                              </td>
+                              <td style={{padding: '12px'}}>
+                                {(a.posisi || a.tempatBekerja || a.jabatan || a.instansi) ? (
+                                  <>
+                                    <div style={{fontWeight:500, marginBottom:'4px'}}>{a.posisi || a.jabatan || '-'}</div>
+                                    <div style={{color:'var(--text-muted)', fontSize:'12px'}}>{a.tempatBekerja || a.instansi || '-'}</div>
+                                  </>
+                                ) : <span style={{color:'var(--text-muted)'}}>-</span>}
+                              </td>
+                              <td style={{padding: '12px'}}>
+                                {a.sosmed_linkedin && <a href={a.sosmed_linkedin.startsWith('http') ? a.sosmed_linkedin : `https://${a.sosmed_linkedin}`} target="_blank" rel="noopener noreferrer" style={{color:'#0a66c2',marginRight:'8px',textDecoration:'none',fontWeight:500}}>LinkedIn</a>}
+                                {a.sosmed_ig && <a href={a.sosmed_ig.startsWith('http') ? a.sosmed_ig : `https://${a.sosmed_ig}`} target="_blank" rel="noopener noreferrer" style={{color:'#E1306C',marginRight:'8px',textDecoration:'none',fontWeight:500}}>IG</a>}
+                                {a.sosmed_fb && <a href={a.sosmed_fb.startsWith('http') ? a.sosmed_fb : `https://${a.sosmed_fb}`} target="_blank" rel="noopener noreferrer" style={{color:'#1877F2',marginRight:'8px',textDecoration:'none',fontWeight:500}}>FB</a>}
+                                {a.sosmed_tiktok && <a href={a.sosmed_tiktok.startsWith('http') ? a.sosmed_tiktok : `https://${a.sosmed_tiktok}`} target="_blank" rel="noopener noreferrer" style={{color:'#ff0050',marginRight:'8px',textDecoration:'none',fontWeight:500}}>TikTok</a>}
+                                {(!a.sosmed_linkedin && !a.sosmed_ig && !a.sosmed_fb && !a.sosmed_tiktok) && <span style={{color:'var(--text-muted)'}}>-</span>}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                        {sampleSize === 0 && (
+                          <tr><td colSpan={5} style={{textAlign:'center', padding:'32px', color:'var(--text-muted)'}}>Sistem Sedang Menyiapkan Sampel Data... Pastikan Filter Batasan Target mencakup data.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
               </div>
               );
             })()}
