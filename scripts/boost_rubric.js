@@ -254,12 +254,6 @@ async function main() {
   console.log(`  Total Alumni   : ${total?.toLocaleString()}`);
   console.log(`  Teridentifikasi: ${verified?.toLocaleString()}`);
   console.log(`  Coverage       : ${total ? ((verified / total) * 100).toFixed(1) : 0}%`);
-
-  // Hitung skor rubrik
-  const coverageScore = verified >= 106720 ? 95 : verified >= 85377 ? 85 : verified >= 56918 ? 70 : verified >= 28459 ? 50 : 20;
-  console.log(`  Skor Coverage  : ${coverageScore}/100 (bobot 40%)`);
-  console.log(`  Skor Completeness: 95/100 (bobot 20%) — 4+ field terisi`);
-  console.log(`\n  Estimasi Nilai Akhir: ${(coverageScore * 0.4 + 90 * 0.4 + 95 * 0.2).toFixed(0)}/100`);
 }
 
 main().catch(console.error);

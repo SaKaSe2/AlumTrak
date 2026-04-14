@@ -1317,24 +1317,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Nilai Akhir Besar */}
-                {totalWeight > 0 ? (
-                  <div className="card" style={{marginBottom:'24px', borderColor: gradeInfo.color, borderWidth:'2px', transition:'all 0.3s ease'}}>
-                    <div className="card-body" style={{textAlign:'center', padding:'40px'}}>
-                      <div className="mono" style={{fontSize:'12px', color:'var(--text-muted)', marginBottom:'8px', letterSpacing:'2px'}}>ESTIMASI NILAI AKHIR</div>
-                      <div style={{fontSize:'72px', fontWeight:700, color: gradeInfo.color, lineHeight:1}}>{nilaiAkhir.toFixed(1)}</div>
-                      <div style={{fontSize:'32px', fontWeight:600, color: gradeInfo.color, marginTop:'8px'}}>Grade: {gradeInfo.grade}</div>
-                      <div className="mono" style={{fontSize:'11px', color:'var(--text-muted)', marginTop:'16px'}}>
-                        Formula Normalisasi: (Total Poin Aktif) / Bobot Aktif {(totalWeight*100).toFixed(0)}%
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="card" style={{marginBottom:'24px', padding:'40px', textAlign:'center'}}>
-                    <div className="mono" style={{color:'var(--text-muted)'}}>Pilih minimal satu komponen penilaian untuk merender kalkulasi rubrik.</div>
-                  </div>
-                )}
-
                 {/* Detail 3 Komponen */}
                 <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'20px', marginBottom:'24px'}}>
                   {/* Coverage */}
@@ -1400,7 +1382,7 @@ export default function Home() {
 
                 {/* Tabel Rubrik Detail */}
                 <div className="card" style={{display: totalWeight > 0 ? 'block' : 'none'}}>
-                  <div className="card-header"><span className="card-title">Detail Rubrik Penilaian Dosen</span></div>
+                  <div className="card-header"><span className="card-title">Detail Rubrik Penilaian</span></div>
                   <table style={{width:'100%'}}>
                     <thead><tr><th>Komponen</th><th>Bobot</th><th>Indikator</th><th>Skor Anda</th><th>Kontribusi Poin</th></tr></thead>
                     <tbody>
