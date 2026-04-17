@@ -187,6 +187,7 @@ export default function Home() {
         const { data, error } = await supabase.from('alumni')
           .select('*')
           .gte('tahun_masuk', '2015')
+          .order('id', { ascending: true })
           .limit(500);
           
         if (data && !error) {
