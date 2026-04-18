@@ -176,6 +176,39 @@ export default function Home() {
   const [covActiveSearch, setCovActiveSearch] = useState('');
   const [covLoading, setCovLoading] = useState(false);
 
+  // Results Explorer States (Hasil Identifikasi Paginated)
+  const [resData, setResData] = useState<any[]>([]);
+  const [resPage, setResPage] = useState(0);
+  const [resSearchString, setResSearchString] = useState('');
+  const [resActiveSearch, setResActiveSearch] = useState('');
+  const [resFilterStatus, setResFilterStatus] = useState('');
+  const [resLoading, setResLoading] = useState(false);
+
+  useEffect(() => {
+    if (page === 'results') {
+      const loadRes = async () => {
+        setResLoading(true);
+        let q = supabase.from('alumni').select('*');
+        if (resActiveSearch) {
+          // Pencarian multi-kriteria: Nama atau NIM
+          const searchParams = resActiveSearch;
+          q = q.or(`nama.ilike.%${searchParams}%,nim.ilike.%${searchParams}%`);
+        }
+        if (resFilterStatus) {
+          q = q.eq('status', resFilterStatus);
+        } else {
+          // Default: tampilkan yang sudah terlacak
+          q = q.in('status', ['Teridentifikasi', 'Perlu Verifikasi']);
+        }
+        
+        const { data, error } = await q.range(resPage * 50, (resPage + 1) * 50 - 1).order('id');
+        if (data && !error) setResData(data);
+        setResLoading(false);
+      }
+      loadRes();
+    }
+  }, [page, resPage, resActiveSearch, resFilterStatus]);
+
   // QA Sample States (2015+)
   const [qaSample, setQaSample] = useState<any[]>([]);
   const [qaSampleLoading, setQaSampleLoading] = useState(false);
@@ -1107,22 +1140,79 @@ export default function Home() {
 
             {page === 'results' && (
               <div className="app-page active">
-                <h2 style={{fontSize: '24px'}}>Hasil Identifikasi</h2><p className="mono text-sm mb-6">Output dari algoritma disambiguasi dan scoring</p>
-                <div className="card">
-                  <table style={{width:'100%'}}>
-                    <thead><tr><th>Alumni Teridentifikasi</th><th>Karir / Institusi</th><th>Location</th><th>Confidence</th><th>Aksi</th></tr></thead>
-                    <tbody>
-                      {alumni.filter(a=>a.status==='Teridentifikasi'||a.status==='Perlu Verifikasi').map((a,i)=>(
-                        <tr key={i}>
-                          <td><div style={{fontWeight:600}}>{a.nama}</div><div className="mono" style={{fontSize:'10px',color:'var(--text-muted)'}}>{a.nim} &middot; {a.prodi}</div></td>
-                          <td><div style={{fontSize:'13px'}}>{a.jabatan} <span style={{color:'var(--accent)'}}>@</span> {a.instansi}</div><div className="mono" style={{fontSize:'10px',color:'var(--text-muted)'}}>Via: {a.sources.join(', ')}</div></td>
-                          <td><span style={{fontSize:'12px',color:'var(--text-muted)'}}>{a.lokasi}</span></td>
-                          <td>{getConfBar(a.confidence)}</td>
-                          <td><button className="btn btn-outline btn-sm" onClick={()=>{setDetailId(a.id); setDetailForm(a); setModal('detailModal');}}>INSPECT</button></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'24px'}}>
+                   <div>
+                     <h2 style={{fontSize: '24px'}}>Hasil Identifikasi Global</h2>
+                     <p className="mono text-sm">Eksplorasi output {totalAlumniDB.toLocaleString()} data OSINT</p>
+                   </div>
+                   <div style={{display:'flex', gap:'12px'}}>
+                     <select 
+                        style={{padding:'6px 12px', fontSize:'13px', background:'rgba(0,0,0,0.3)', border:'1px solid var(--border)', borderRadius:'4px', color:'var(--text)'}}
+                        value={resFilterStatus}
+                        onChange={(e)=>{setResFilterStatus(e.target.value); setResPage(0);}}
+                     >
+                        <option value="">Semua (Teridentifikasi & Perlu Verif)</option>
+                        <option value="Teridentifikasi">Hanya Teridentifikasi</option>
+                        <option value="Perlu Verifikasi">Hanya Perlu Verifikasi Manual</option>
+                        <option value="Belum Dilacak">Belum Dilacak</option>
+                     </select>
+                     <div style={{display:'flex', gap:'4px'}}>
+                       <input 
+                         type="text" 
+                         placeholder="Cari Nama / NIM..." 
+                         style={{padding:'6px 12px', fontSize:'13px', width:'220px', background:'rgba(0,0,0,0.2)', border:'1px solid var(--border)', color:'var(--text)', borderRadius:'4px'}}
+                         value={resSearchString}
+                         onChange={(e)=>setResSearchString(e.target.value)}
+                         onKeyDown={(e)=>{if(e.key==='Enter'){setResPage(0); setResActiveSearch(resSearchString);}}}
+                       />
+                       <button className="btn btn-outline btn-sm" onClick={()=>{setResPage(0); setResActiveSearch(resSearchString);}}>CARI</button>
+                     </div>
+                   </div>
+                </div>
+
+                <div className="card" style={{padding:0}}>
+                  <div className="card-body" style={{overflowX: 'auto', minHeight:'300px', padding:0}}>
+                    {resLoading ? (
+                      <div style={{padding:'60px', textAlign:'center', color:'var(--text-muted)'}}>Memuat Data Identifikasi dari Cloud Database...</div>
+                    ) : (
+                      <table style={{width: '100%', fontSize: '13px', borderCollapse: 'collapse'}}>
+                        <thead style={{position: 'sticky', top: 0, background: 'var(--bg)', zIndex: 1, boxShadow: '0 1px 0 var(--border)'}}>
+                          <tr>
+                            <th style={{padding: '12px'}}>No.</th>
+                            <th style={{padding: '12px'}}>Alumni Teridentifikasi</th>
+                            <th style={{padding: '12px'}}>Karir / Institusi</th>
+                            <th style={{padding: '12px'}}>Location</th>
+                            <th style={{padding: '12px'}}>Confidence</th>
+                            <th style={{padding: '12px'}}>Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {resData.map((a,i)=>(
+                            <tr key={i} style={{borderBottom: '1px solid var(--border)'}}>
+                              <td style={{padding: '12px'}} className="mono">{resPage * 50 + i + 1}</td>
+                              <td style={{padding: '12px'}}><div style={{fontWeight:600}}>{a.nama}</div><div className="mono" style={{fontSize:'10px',color:'var(--text-muted)'}}>{a.nim} &middot; {a.program_studi || a.prodi}</div></td>
+                              <td style={{padding: '12px'}}><div style={{fontSize:'13px'}}>{a.jabatan || a.posisi || '-'} <span style={{color:'var(--accent)'}}>{(a.instansi || a.tempat_bekerja) ? '@' : ''}</span> {a.instansi || a.tempat_bekerja || ''}</div><div className="mono" style={{fontSize:'10px',color:'var(--text-muted)'}}>Via: {(a.sources || []).join(', ') || '-'}</div></td>
+                              <td style={{padding: '12px'}}><span style={{fontSize:'12px',color:'var(--text-muted)'}}>{a.lokasi || a.alamat_bekerja || '-'}</span></td>
+                              <td style={{padding: '12px'}}>{getConfBar(a.confidence)}</td>
+                              <td style={{padding: '12px'}}><button className="btn btn-outline btn-sm" onClick={()=>{setDetailId(a.id); setDetailForm(a); setModal('detailModal');}}>INSPECT</button></td>
+                            </tr>
+                          ))}
+                          {resData.length === 0 && (
+                            <tr><td colSpan={6} style={{textAlign:'center', padding:'32px', color:'var(--text-muted)'}}>Tidak ada data yang cocok dengan filter.</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                  <div className="card-footer" style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px', borderTop:'1px solid var(--border)', background:'rgba(255,255,255,0.01)'}}>
+                    <span className="mono" style={{fontSize:'11px', color:'var(--text-muted)'}}>
+                      Menampilkan baris {resPage * 50 + 1} - {resPage * 50 + Math.max(resData.length, 0)} (Server-Side Pagination)
+                    </span>
+                    <div style={{display:'flex', gap:'8px'}}>
+                      <button className="btn btn-outline btn-sm" disabled={resPage === 0} onClick={()=>setResPage(p => p - 1)}>&larr; Prev</button>
+                      <button className="btn btn-outline btn-sm" disabled={resData.length < 50} onClick={()=>setResPage(p => p + 1)}>Next &rarr;</button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
