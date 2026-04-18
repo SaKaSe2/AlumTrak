@@ -181,6 +181,8 @@ export default function Home() {
   const [resPage, setResPage] = useState(0);
   const [resSearchString, setResSearchString] = useState('');
   const [resActiveSearch, setResActiveSearch] = useState('');
+  const [resSearchTahun, setResSearchTahun] = useState('');
+  const [resActiveTahun, setResActiveTahun] = useState('');
   const [resFilterStatus, setResFilterStatus] = useState('');
   const [resLoading, setResLoading] = useState(false);
 
@@ -189,25 +191,30 @@ export default function Home() {
       const loadRes = async () => {
         setResLoading(true);
         let q = supabase.from('alumni').select('*');
+        
         if (resActiveSearch) {
-          // Pencarian multi-kriteria: Nama atau NIM
-          const searchParams = resActiveSearch;
-          q = q.or(`nama.ilike.%${searchParams}%,nim.ilike.%${searchParams}%`);
+          q = q.or(`nama.ilike.%${resActiveSearch}%,nim.ilike.%${resActiveSearch}%`);
+        }
+        if (resActiveTahun) {
+          q = q.ilike('tahun_masuk', `%${resActiveTahun}%`);
         }
         if (resFilterStatus) {
           q = q.eq('status', resFilterStatus);
         } else {
-          // Default: tampilkan yang sudah terlacak
+          // Default: tampilkan yang sudah terlacak (atau semua opsional)
+          // Biarkan menampilkan semua jika filter status "" dan kita sudah pakai pagination
           q = q.in('status', ['Teridentifikasi', 'Perlu Verifikasi']);
         }
         
         const { data, error } = await q.range(resPage * 50, (resPage + 1) * 50 - 1).order('id');
+        if (error) console.error("Res Fetch Error:", error);
         if (data && !error) setResData(data);
+        else if (error) setResData([]); // Kosongkan bila error (misal typo)
         setResLoading(false);
       }
       loadRes();
     }
-  }, [page, resPage, resActiveSearch, resFilterStatus]);
+  }, [page, resPage, resActiveSearch, resFilterStatus, resActiveTahun]);
 
   // QA Sample States (2015+)
   const [qaSample, setQaSample] = useState<any[]>([]);
@@ -1159,13 +1166,21 @@ export default function Home() {
                      <div style={{display:'flex', gap:'4px'}}>
                        <input 
                          type="text" 
+                         placeholder="Tahun..." 
+                         style={{padding:'6px 12px', fontSize:'13px', width:'90px', background:'rgba(0,0,0,0.2)', border:'1px solid var(--border)', color:'var(--text)', borderRadius:'4px'}}
+                         value={resSearchTahun}
+                         onChange={(e)=>setResSearchTahun(e.target.value)}
+                         onKeyDown={(e)=>{if(e.key==='Enter'){setResPage(0); setResActiveTahun(resSearchTahun); setResActiveSearch(resSearchString);}}}
+                       />
+                       <input 
+                         type="text" 
                          placeholder="Cari Nama / NIM..." 
                          style={{padding:'6px 12px', fontSize:'13px', width:'220px', background:'rgba(0,0,0,0.2)', border:'1px solid var(--border)', color:'var(--text)', borderRadius:'4px'}}
                          value={resSearchString}
                          onChange={(e)=>setResSearchString(e.target.value)}
-                         onKeyDown={(e)=>{if(e.key==='Enter'){setResPage(0); setResActiveSearch(resSearchString);}}}
+                         onKeyDown={(e)=>{if(e.key==='Enter'){setResPage(0); setResActiveTahun(resSearchTahun); setResActiveSearch(resSearchString);}}}
                        />
-                       <button className="btn btn-outline btn-sm" onClick={()=>{setResPage(0); setResActiveSearch(resSearchString);}}>CARI</button>
+                       <button className="btn btn-outline btn-sm" onClick={()=>{setResPage(0); setResActiveTahun(resSearchTahun); setResActiveSearch(resSearchString);}}>CARI</button>
                      </div>
                    </div>
                 </div>
