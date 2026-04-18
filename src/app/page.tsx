@@ -850,7 +850,7 @@ export default function Home() {
     (searchNim ? true : (!filterAlumni || a.status === filterAlumni))
   );
   
-  const detailA = detailId ? alumni.find(a => a.id === detailId) : null;
+  const detailA = detailId ? (alumni.find(a => a.id === detailId) || detailForm) : null;
 
   return (
     <div id="app-view">
