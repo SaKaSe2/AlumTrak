@@ -763,6 +763,9 @@ export default function Home() {
       } catch(err) {
         console.error(`[DB] Gagal simpan ${a.nama}:`, err);
       }
+
+      // JEDA PENDINGINAN: Beri jeda 1 detik sebelum lanjut ke profil berikutnya agar API OSINT tidak timeout/crash
+      await new Promise(r => setTimeout(r, 1000));
     }
 
     setAlumni(updatedAlumni);
