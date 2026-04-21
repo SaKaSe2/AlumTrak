@@ -1,0 +1,67 @@
+<mxfile host="Electron" modified="2026-04-19T00:00:00.000Z" agent="Mozilla/5.0" version="22.1.2" type="device">
+  <diagram id="UC_DP4" name="Alumni Tracker OSINT">
+    <mxGraphModel dx="1000" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Aktor: Administrator -->
+        <mxCell id="actor_admin" value="Administrator" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="70" y="240" width="40" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Aktor: Dosen/Evaluator -->
+        <mxCell id="actor_dosen" value="Evaluator / Dosen" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="720" y="380" width="40" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- System Boundary Box -->
+        <mxCell id="sys_box" value="OSINT Alumni Tracker System" style="swimlane;html=1;childLayout=stackLayout;resizeParent=1;resizeParentMax=0;horizontal=1;startSize=30;horizontalStack=0;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="200" y="100" width="450" height="420" as="geometry" />
+        </mxCell>
+        
+        <!-- Background Filler for Box -->
+        <mxCell id="sys_bg" value="" style="html=1;whiteSpace=wrap;fillColor=none;strokeColor=none;" vertex="1" parent="sys_box">
+          <mxGeometry x="0" y="30" width="450" height="390" as="geometry" />
+        </mxCell>
+
+        <!-- Use Case 1 -->
+        <mxCell id="uc_1" value="Jalankan Pelacakan OSINT Tracker" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="sys_bg">
+          <mxGeometry x="150" y="40" width="150" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Use Case 2 -->
+        <mxCell id="uc_2" value="Filter &amp; Eksplorasi Hasil Identifikasi" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="sys_bg">
+          <mxGeometry x="150" y="160" width="150" height="70" as="geometry" />
+        </mxCell>
+        
+        <!-- Use Case 3 -->
+        <mxCell id="uc_3" value="Akses Laporan Rubrik &amp; Validasi Data" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="sys_bg">
+          <mxGeometry x="150" y="280" width="150" height="70" as="geometry" />
+        </mxCell>
+        
+        <!-- Connections: Admin -->
+        <mxCell id="edge_admin_1" style="edgeStyle=none;html=1;endArrow=none;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="actor_admin" target="uc_1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_admin_2" style="edgeStyle=none;html=1;endArrow=none;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="actor_admin" target="uc_2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Connections: Evaluator -->
+        <mxCell id="edge_eval_2" style="edgeStyle=none;html=1;endArrow=none;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="actor_dosen" target="uc_2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="680" y="420" />
+              <mxPoint x="680" y="325" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_eval_3" style="edgeStyle=none;html=1;endArrow=none;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="actor_dosen" target="uc_3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

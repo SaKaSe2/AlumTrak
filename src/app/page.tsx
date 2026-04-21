@@ -296,6 +296,8 @@ export default function Home() {
 
   // Tracking Job State
   const [isTracking, setIsTracking] = useState(false);
+  const stopRequested = useRef(false);
+  const [trackingProgress, setTrackingProgress] = useState<{current: number, total: number, found: number, failed: number}>({current:0, total:0, found:0, failed:0});
   const [consoleLog, setConsoleLog] = useState<{time:string, msg:string, cls:string}[]>([
     {time: new Date().toLocaleTimeString(), msg: 'System ready. Awaiting command...', cls: 'c-sys'}
   ]);
@@ -427,63 +429,47 @@ export default function Home() {
     }
   };
 
+  const handleStopJob = () => {
+    stopRequested.current = true;
+    addLogContext('[STOP] User menghentikan pelacakan. Menyimpan progress...', 'c-warn');
+    showToast('Menghentikan pelacakan... Progress tersimpan otomatis.', 'warn');
+  };
+
   const handleRunJob = async () => {
     if(isTracking) return;
+    stopRequested.current = false;
     setIsTracking(true);
     setConsoleLog([]);
     const activeSrc = sources.filter(s=>s.aktif).map(s=>s.nama);
     const targets = alumni.filter(a => !a.optout && (filterAlumni ? a.status === filterAlumni : a.status !== 'Teridentifikasi'));
     
+    setTrackingProgress({current:0, total:targets.length, found:0, failed:0});
     addLogContext(`[BOOT] OSINT Engine v2.0 initialized. Targets: ${targets.length}. Modules: [${activeSrc.join(', ')}]`);
-    addLogContext('[INFO] Revisi Modul 2: PDDikti sebagai sumber verifikasi PRIMER (Langkah 0)', 'c-sys');
+    addLogContext('[INFO] Mode RESUME aktif: alumni yang sudah terlacak akan dilewati otomatis.', 'c-sys');
+    addLogContext('[INFO] Tekan tombol STOP jika API key habis, progress tersimpan per-alumni.', 'c-sys');
 
-    // Langkah 0: Verifikasi PDDikti untuk setiap target
+    // Langkah 0: Verifikasi PDDikti untuk setiap target (skip jika diminta stop)
     addLogContext('[EXEC] Langkah 0: Verifikasi data resmi via PDDikti API...', 'c-sys');
-    addLogContext('  -> Endpoint: api-pddikti.kemdiktisaintek.go.id/pencarian/mhs/', 'c-sys');
-
     const pddiktiResults: Record<number, PDDiktiResult> = {};
     for (const target of targets) {
+      if (stopRequested.current) break;
       addLogContext(`  -> Querying PDDikti for: ${target.nama}...`, 'c-sys');
       const result = await verifikasiPDDikti(target);
       pddiktiResults[target.id] = result;
 
       if (result.status_pddikti === 'TERVERIFIKASI_RESMI') {
-        addLogContext(`  [OK] ${target.nama} -> TERVERIFIKASI. NIM: ${result.nim}, Prodi: ${result.prodi}, PT: ${result.perguruan_tinggi}`, 'c-ok');
-      } else if (result.status_pddikti === 'TIDAK_DITEMUKAN') {
-        addLogContext(`  [WARN] ${target.nama} -> Tidak ditemukan di PDDikti UMM`, 'c-warn');
+        addLogContext(`  [OK] ${target.nama} -> TERVERIFIKASI. NIM: ${result.nim}`, 'c-ok');
       } else {
-        addLogContext(`  [WARN] ${target.nama} -> PDDikti error: ${result.keterangan}`, 'c-warn');
+        addLogContext(`  [WARN] ${target.nama} -> ${result.keterangan || 'Tidak ditemukan'}`, 'c-warn');
       }
     }
 
-    addLogContext(`[DONE] Langkah 0 selesai. Memulai pencarian sumber publik sekunder...`, 'c-ok');
+    if (!stopRequested.current) {
+      addLogContext(`[DONE] Langkah 0 selesai. Memulai pencarian per-alumni...`, 'c-ok');
+    }
 
-    const steps = [
-      ['Langkah 1 (Revisi): Membangun profil berdasarkan data PDDikti...', 'c-sys'],
-      ['Langkah 4: Generating boolean query params...', 'c-sys'],
-      ['Langkah 5: Executing batch scraping routines (GitHub, LinkedIn, Tracer UMM)...', 'c-sys'],
-      ['Langkah 6: Ekstraksi NLP sinyal identitas...', 'c-sys'],
-      ['Langkah 7 (Revisi): Disambiguasi + Bobot PDDikti (bonus 0.15)...', 'c-sys']
-    ];
-
-    let sIdx = 0;
-    const nextStep = () => {
-      if(sIdx >= steps.length) {
-        finishJob(targets, activeSrc, pddiktiResults);
-        return;
-      }
-      addLogContext(`[EXEC] Step ${sIdx+1}: ${steps[sIdx][0]}`, steps[sIdx][1]);
-      if(sIdx===2) { activeSrc.filter(s=>s!=='PDDikti').forEach(s => addLogContext(`  -> Handshaking w/ ${s} API...`, 'c-sys')); addLogContext('  -> Initializing LinkedIn Bot (Puppeteer Headless)...', 'c-sys'); }
-      if(sIdx===4) targets.forEach(t => {
-        const bonus = pddiktiResults[t.id]?.status_pddikti === 'TERVERIFIKASI_RESMI' ? '+0.15 PDDikti bonus' : 'no PDDikti bonus';
-        addLogContext(`  -> Scoring ${t.nama} (${bonus}) completed.`, 'c-ok');
-      });
-      
-      sIdx++;
-      setTimeout(nextStep, 800 + Math.random() * 600);
-    };
-
-    setTimeout(nextStep, 1000);
+    // Langsung eksekusi finishJob tanpa delay animasi palsu
+    await finishJob(targets, activeSrc, pddiktiResults);
   };
 
   const finishJob = async (targets: Alumni[], activeSrc: string[], pddiktiResults: Record<number, PDDiktiResult>) => {
@@ -491,9 +477,20 @@ export default function Home() {
     const updatedAlumni = [...alumni];
     const newEvidence = [...evidence];
 
-    for (const t of targets) {
+    for (let idx = 0; idx < targets.length; idx++) {
+      // Cek apakah user menekan STOP
+      if (stopRequested.current) {
+        addLogContext(`[PAUSED] Pelacakan dihentikan pada alumni ke-${idx}/${targets.length}. Jalankan ulang untuk melanjutkan dari sisa target.`, 'c-warn');
+        break;
+      }
+
+      const t = targets[idx];
       const a = updatedAlumni.find(x => x.id === t.id);
       if(!a) continue;
+
+      // Update progress counter
+      setTrackingProgress(prev => ({...prev, current: idx + 1}));
+      addLogContext(`\n[TRACK ${idx+1}/${targets.length}] Memproses: ${a.nama} (ID: ${a.id})`, 'c-sys');
 
       // Simpan data PDDikti ke record alumni
       const pddikti = pddiktiResults[t.id];
@@ -508,9 +505,7 @@ export default function Home() {
         }
       }
 
-      // -------------------------------------------------------------
-      // AUTOMATED HARD DATA SCRAPING (GitHub + LinkedIn Bot)
-      // -------------------------------------------------------------
+      // AUTOMATED HARD DATA SCRAPING
       let osintData: any = null;
       let linkedinData: any = null;
       let tracerUmmData: any = null;
@@ -521,87 +516,81 @@ export default function Home() {
         const osintJson = await osintRes.json();
         if(osintJson.success) osintData = osintJson.data;
       } catch {
-         // Silently fail if api fails
+         // Silently fail
       }
 
       // Sumber 2: LinkedIn Bot (Puppeteer Stealth via Backend Render)
-      let liAttempts = 0;
-      let liSuccess = false;
-      while (liAttempts < 3 && !liSuccess) {
-        liAttempts++;
-        try {
-          if (liAttempts > 1) {
-            addLogContext(`  -> [BOT] Retry ${liAttempts-1}: Memeriksa ulang LinkedIn untuk ${a.nama}...`, 'c-sys');
-            await new Promise(r => setTimeout(r, 1000));
-          } else {
-            addLogContext(`  -> [BOT] Memeriksa beberapa hasil LinkedIn untuk ${a.nama}...`, 'c-sys');
+      if (!stopRequested.current) {
+        let liAttempts = 0;
+        let liSuccess = false;
+        while (liAttempts < 3 && !liSuccess && !stopRequested.current) {
+          liAttempts++;
+          try {
+            if (liAttempts > 1) {
+              addLogContext(`  -> [BOT] Retry ${liAttempts-1}: LinkedIn untuk ${a.nama}...`, 'c-sys');
+              await new Promise(r => setTimeout(r, 1000));
+            } else {
+              addLogContext(`  -> [BOT] Memeriksa LinkedIn untuk ${a.nama}...`, 'c-sys');
+            }
+            const liRes = await fetch(`/api/osint-bot?target=${encodeURIComponent(a.nama)}`);
+            const liJson = await liRes.json();
+            if(liJson.success && liJson.data) {
+              linkedinData = liJson.data;
+              addLogContext(`  [OK] LinkedIn HIT: ${linkedinData.headline || linkedinData.name}`, 'c-ok');
+              liSuccess = true;
+            } else if (liJson.data && liJson.data.totalChecked > 0) {
+              addLogContext(`  [WARN] LinkedIn: ${liJson.data.totalChecked} profil diperiksa, tidak cocok.`, 'c-warn');
+              liSuccess = true;
+            } else {
+              addLogContext(`  [WARN] LinkedIn: ${liJson.error || 'Gagal'}`, 'c-warn');
+            }
+          } catch (err) {
+            addLogContext(`  [WARN] LinkedIn timeout untuk ${a.nama}`, 'c-warn');
           }
-          const liRes = await fetch(`/api/osint-bot?target=${encodeURIComponent(a.nama)}`);
-          const liJson = await liRes.json();
-          if(liJson.success && liJson.data) {
-            linkedinData = liJson.data;
-            addLogContext(`  [OK] LinkedIn Bot HIT: ${linkedinData.headline || linkedinData.name} (${linkedinData.matchScore}% Match${linkedinData.hasUniHint ? ' + UMM Hint' : ''})`, 'c-ok');
-            liSuccess = true;
-          } else if (liJson.data && liJson.data.totalChecked > 0) {
-            addLogContext(`  [WARN] LinkedIn Bot: Diperiksa ${liJson.data.totalChecked} profil, tidak ada yang cocok sempurna (Validasi Kampus Gagal).`, 'c-warn');
-            liSuccess = true; // Gagal terkonfirmasi karena validasi kampus, tak perlu retry berlebihan
-          } else {
-            addLogContext(`  [WARN] LinkedIn Bot: ${liJson.error || 'Profil gagal diekstrak / JSON Error'}`, 'c-warn');
-          }
-        } catch (err) {
-          addLogContext(`  [WARN] LinkedIn Bot timeout/error untuk ${a.nama}`, 'c-warn');
         }
       }
 
-      // Sumber 3: internal Tracer Study UMM
-      try {
-        addLogContext(`  -> [BOT] Sinkronisasi Tracer Study UMM untuk ${a.nama}...`, 'c-sys');
-        const tracerRes = await fetch(`/api/osint-tracer-umm?target=${encodeURIComponent(a.nama)}&nim=${encodeURIComponent(a.nim || '')}`);
-        const tracerJson = await tracerRes.json();
-        if(tracerJson.success && tracerJson.data) {
-          tracerUmmData = tracerJson.data;
-          addLogContext(`  [OK] Tracer UMM HIT: ${tracerUmmData.instansi} - ${tracerUmmData.jabatan}`, 'c-ok');
-        } else {
-          addLogContext(`  [WARN] Tracer UMM: Belum mengisi kuesioner`, 'c-sys');
+      // Sumber 3: Tracer Study UMM
+      if (!stopRequested.current) {
+        try {
+          addLogContext(`  -> [BOT] Tracer UMM untuk ${a.nama}...`, 'c-sys');
+          const tracerRes = await fetch(`/api/osint-tracer-umm?target=${encodeURIComponent(a.nama)}&nim=${encodeURIComponent(a.nim || '')}`);
+          const tracerJson = await tracerRes.json();
+          if(tracerJson.success && tracerJson.data) {
+            tracerUmmData = tracerJson.data;
+            addLogContext(`  [OK] Tracer UMM HIT: ${tracerUmmData.instansi}`, 'c-ok');
+          } else {
+            addLogContext(`  [WARN] Tracer UMM: Belum mengisi kuesioner`, 'c-sys');
+          }
+        } catch {
+           // Silently fail
         }
-      } catch {
-         // Silently fail
       }
 
       // Sumber 4: Facebook (jika aktif)
       let fbData: any = null;
-      if (activeSrc.includes('Facebook')) {
+      if (activeSrc.includes('Facebook') && !stopRequested.current) {
         try {
-          addLogContext(`  -> [BOT] Mencari profil Facebook untuk ${a.nama}...`, 'c-sys');
           const fbRes = await fetch(`/api/osint-social?target=${encodeURIComponent(a.nama)}&platform=facebook`);
           const fbJson = await fbRes.json();
           if (fbJson.success && fbJson.data) {
             fbData = fbJson.data;
             addLogContext(`  [OK] Facebook HIT: ${fbData.url}`, 'c-ok');
-          } else {
-            addLogContext(`  [WARN] Facebook: Profil tidak ditemukan`, 'c-sys');
           }
-        } catch {
-          // Silently fail
-        }
+        } catch {}
       }
 
       // Sumber 5: Instagram (jika aktif)
       let igData: any = null;
-      if (activeSrc.includes('Instagram')) {
+      if (activeSrc.includes('Instagram') && !stopRequested.current) {
         try {
-          addLogContext(`  -> [BOT] Mencari profil Instagram untuk ${a.nama}...`, 'c-sys');
           const igRes = await fetch(`/api/osint-social?target=${encodeURIComponent(a.nama)}&platform=instagram`);
           const igJson = await igRes.json();
           if (igJson.success && igJson.data) {
             igData = igJson.data;
             addLogContext(`  [OK] Instagram HIT: ${igData.url}`, 'c-ok');
-          } else {
-            addLogContext(`  [WARN] Instagram: Profil tidak ditemukan`, 'c-sys');
           }
-        } catch {
-          // Silently fail
-        }
+        } catch {}
       }
 
       const hasPddikti = pddikti?.status_pddikti === 'TERVERIFIKASI_RESMI';
@@ -609,7 +598,7 @@ export default function Home() {
       
       const r = Math.random();
       
-      // Jika salah satu sumber OSINT menemukan Hard Data, kita "HIT"
+      // Jika salah satu sumber OSINT menemukan Hard Data
       if(osintData || linkedinData || tracerUmmData || r > 0.5) {
         f++;
         a.status = 'Teridentifikasi';
@@ -626,28 +615,21 @@ export default function Home() {
           a.posisi = osintData.posisi || '';
           a.sosmed_linkedin = osintData.blog || '';
           a.sosmed_ig = osintData.twitter || '';
-          addLogContext(`  [OK] REAL OSINT HIT: Ditemukan hard-data publik untuk ${a.nama} dari Github!`, 'c-green');
         }
 
         if(linkedinData) {
           a.sources.push('LinkedIn Bot');
           a.sosmed_linkedin = linkedinData.url || a.sosmed_linkedin || '';
-          
-          // Prioritaskan field company dari backend (dari span.member-current-company)
           const liCompany = linkedinData.company || '';
           const headline = linkedinData.headline || '';
-          
           if (liCompany) {
-            // Company sudah tersedia langsung dari profil LinkedIn
             a.tempatBekerja = liCompany;
             a.jabatan = headline || a.jabatan || '';
             a.posisi = headline || a.posisi || '';
           } else if (headline) {
-            // Fallback: parse headline untuk memisahkan jabatan dan tempat bekerja
             const separators = [' at ', ' di ', ' - '];
             let parsedJob = headline;
             let parsedCompany = '';
-            
             for (const sep of separators) {
               if (headline.toLowerCase().includes(sep.toLowerCase())) {
                 const parts = headline.split(new RegExp(sep, 'i'));
@@ -656,29 +638,18 @@ export default function Home() {
                 break;
               }
             }
-            
-            // Coba pecah berdasarkan ' | ' jika belum ketemu company
             if (!parsedCompany && headline.includes(' | ')) {
               const parts = headline.split(' | ');
               parsedJob = parts[0].trim();
               parsedCompany = parts.slice(1).join(' | ').trim();
             }
-            
             a.jabatan = parsedJob || a.jabatan || '';
             a.posisi = parsedJob || a.posisi || '';
             a.tempatBekerja = parsedCompany || a.tempatBekerja || '';
           }
-
-          // Lokasi dari LinkedIn
-          if (linkedinData.location) {
-            a.lokasi = linkedinData.location;
-          }
-          if (linkedinData.physicalAddress) {
-            a.alamatBekerja = linkedinData.physicalAddress;
-          }
-          if (linkedinData.physicalWebsite) {
-            a.sosmed_tempatBekerja = linkedinData.physicalWebsite;
-          }
+          if (linkedinData.location) a.lokasi = linkedinData.location;
+          if (linkedinData.physicalAddress) a.alamatBekerja = linkedinData.physicalAddress;
+          if (linkedinData.physicalWebsite) a.sosmed_tempatBekerja = linkedinData.physicalWebsite;
         }
 
         if(tracerUmmData) {
@@ -689,30 +660,16 @@ export default function Home() {
           a.noHp = tracerUmmData.no_hp || a.noHp || '';
         }
 
-        // Simpan URL Facebook jika ditemukan
-        if (fbData) {
-          a.sosmed_fb = fbData.url || '';
-          a.sources.push('Facebook');
-        }
-
-        // Simpan URL Instagram jika ditemukan
-        if (igData) {
-          a.sosmed_ig = igData.url || '';
-          a.sources.push('Instagram');
-        }
+        if (fbData) { a.sosmed_fb = fbData.url || ''; a.sources.push('Facebook'); }
+        if (igData) { a.sosmed_ig = igData.url || ''; a.sources.push('Instagram'); }
 
         if(!osintData && !linkedinData && !tracerUmmData) {
-          a.email = '';
-          a.tempatBekerja = '';
-          a.alamatBekerja = '';
-          a.sosmed_tempatBekerja = '';
-          a.posisi = '';
-          a.noHp = '';
-          a.sosmed_linkedin = '';
-          a.sosmed_ig = '';
+          a.email = ''; a.tempatBekerja = ''; a.alamatBekerja = ''; a.sosmed_tempatBekerja = '';
+          a.posisi = ''; a.noHp = ''; a.sosmed_linkedin = ''; a.sosmed_ig = '';
         }
 
-        addLogContext(`[HIT] Match found for ${a.nama} (Score: ${Math.round(a.confidence*100)}%${hasPddikti?' +PDDikti':''})`,'c-ok');
+        addLogContext(`[HIT] ${a.nama} -> Teridentifikasi (${Math.round(a.confidence*100)}%)`, 'c-ok');
+        setTrackingProgress(prev => ({...prev, found: prev.found + 1}));
         
         newEvidence.push({
           aId: a.id, sumber: osintData ? 'Github API' : (hasPddikti ? 'PDDikti' : (a.sources[0] || 'Web Search')), jabatan: a.jabatan, instansi: a.instansi,
@@ -726,51 +683,44 @@ export default function Home() {
         v++;
         a.status = 'Perlu Verifikasi';
         a.confidence = Math.min((0.35 + Math.random() * 0.25) + bonusPddikti, 0.74);
-        addLogContext(`[WARN] Ambiguous match for ${a.nama}${hasPddikti?' (PDDikti verified but OSINT inconclusive)':''}. Requires manual review.`, 'c-warn');
+        addLogContext(`[WARN] ${a.nama} -> Perlu Verifikasi Manual`, 'c-warn');
+        setTrackingProgress(prev => ({...prev, failed: prev.failed + 1}));
       }
       else {
         a.status = 'Belum Ditemukan';
         a.confidence = hasPddikti ? 0.15 : 0.1;
-        addLogContext(`[FAIL] No public signals for ${a.nama}.${hasPddikti?' PDDikti data available as fallback.':''}`, 'c-warn');
+        addLogContext(`[FAIL] ${a.nama} -> Tidak ditemukan`, 'c-warn');
+        setTrackingProgress(prev => ({...prev, failed: prev.failed + 1}));
       }
       a.tglUpdate = new Date().toISOString().slice(0,10);
+
+      // SAVE PER-ALUMNI langsung ke Supabase (agar progress tidak hilang)
+      try {
+        await supabase.from('alumni').update({
+          status: a.status, confidence: a.confidence, jabatan: a.jabatan, instansi: a.instansi,
+          lokasi: a.lokasi, sources: a.sources, sosmed_linkedin: a.sosmed_linkedin,
+          sosmed_fb: a.sosmed_fb, sosmed_ig: a.sosmed_ig, email: a.email,
+          no_hp: a.noHp, posisi: a.posisi, tempat_bekerja: a.tempatBekerja,
+          alamat_bekerja: a.alamatBekerja, sosmed_tempat_bekerja: a.sosmed_tempatBekerja,
+          updated_at: new Date().toISOString()
+        }).eq('id', a.id);
+      } catch(err) {
+        console.error(`[DB] Gagal simpan ${a.nama}:`, err);
+      }
     }
 
-    const pddiktiVerified = targets.filter(t => pddiktiResults[t.id]?.status_pddikti === 'TERVERIFIKASI_RESMI').length;
-    addLogContext(`[HALT] Job finished. Processed: ${targets.length}. PDDikti verified: ${pddiktiVerified}. Hooks: ${f}. Manual: ${v}.`);
-    
-    // Sync ke Supabase setelah OSINT
-    for (const a of updatedAlumni) {
-        if (a.confidence > 0) { // Hanya update jika dilacak
-             try {
-                 await supabase.from('alumni').update({
-                     status: a.status, 
-                     confidence: a.confidence, 
-                     jabatan: a.jabatan, 
-                     instansi: a.instansi, 
-                     lokasi: a.lokasi, 
-                     sources: a.sources, 
-                     sosmed_linkedin: a.sosmed_linkedin,
-                     sosmed_fb: a.sosmed_fb,
-                     sosmed_ig: a.sosmed_ig,
-                     email: a.email,
-                     no_hp: a.noHp,
-                     posisi: a.posisi,
-                     tempat_bekerja: a.tempatBekerja,
-                     alamat_bekerja: a.alamatBekerja,
-                     sosmed_tempat_bekerja: a.sosmed_tempatBekerja,
-                     updated_at: new Date().toISOString()
-                 }).eq('id', a.id);
-             } catch(err) {
-                 console.error(err);
-             }
-        }
-    }
     setAlumni(updatedAlumni);
-
     setEvidence(newEvidence);
+
+    const wasStopped = stopRequested.current;
+    addLogContext(`[HALT] ${wasStopped ? 'PAUSED' : 'COMPLETED'}. Diproses: ${trackingProgress.current}/${targets.length}. Ditemukan: ${f}. Gagal: ${v}.`);
+    if (wasStopped) {
+      addLogContext(`[INFO] Progress tersimpan. Ganti API key di .env.local lalu tekan JALANKAN lagi untuk melanjutkan sisa target.`, 'c-sys');
+    }
+
     setIsTracking(false);
-    showToast('Tracking Cycle Completed');
+    stopRequested.current = false;
+    showToast(wasStopped ? `Dihentikan. ${f} alumni tersimpan. Lanjutkan kapan saja.` : 'Tracking selesai.');
   };
 
   const getStatusBadge = (s: string) => {
@@ -1125,9 +1075,30 @@ export default function Home() {
                           {sources.filter(s=>s.aktif).map((s,i) => <span key={i} className={`sp-pill ${s.tipe}`}>{s.nama}</span>)}
                         </div>
                       </div>
-                      <button className="btn w-full" onClick={handleRunJob} disabled={isTracking || pendingCount === 0} style={{opacity: (isTracking || pendingCount === 0)?0.5:1}}>
-                        <span>{isTracking ? 'EXECUTING...' : `JALANKAN PELACAKAN (${pendingCount} TARGET)`}</span>
-                      </button>
+
+                      {/* Progress Bar saat tracking berjalan */}
+                      {isTracking && trackingProgress.total > 0 && (
+                        <div style={{marginBottom:'16px', padding:'12px', background:'rgba(255,255,255,0.02)', borderRadius:'6px', border:'1px solid rgba(255,255,255,0.05)'}}>
+                          <div style={{display:'flex', justifyContent:'space-between', marginBottom:'8px', fontSize:'12px'}}>
+                            <span className="mono" style={{color:'var(--text-muted)'}}>Progress: {trackingProgress.current}/{trackingProgress.total}</span>
+                            <span className="mono" style={{color:'var(--green)'}}>Ditemukan: {trackingProgress.found} | <span style={{color:'var(--amber)'}}>Gagal: {trackingProgress.failed}</span></span>
+                          </div>
+                          <div style={{width:'100%', height:'6px', background:'rgba(255,255,255,0.05)', borderRadius:'3px', overflow:'hidden'}}>
+                            <div style={{width:`${(trackingProgress.current/trackingProgress.total)*100}%`, height:'100%', background:'var(--green)', borderRadius:'3px', transition:'width 0.3s ease'}}></div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div style={{display:'flex', gap:'8px'}}>
+                        <button className="btn" style={{flex:1, opacity: (isTracking || pendingCount === 0)?0.5:1}} onClick={handleRunJob} disabled={isTracking || pendingCount === 0}>
+                          <span>{isTracking ? 'EXECUTING...' : `JALANKAN PELACAKAN (${pendingCount} TARGET)`}</span>
+                        </button>
+                        {isTracking && (
+                          <button className="btn" style={{background:'var(--red)', color:'#fff', minWidth:'120px'}} onClick={handleStopJob}>
+                            <span>STOP</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="card">

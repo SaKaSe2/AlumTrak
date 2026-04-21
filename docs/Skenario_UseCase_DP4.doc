@@ -1,0 +1,45 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<style>
+  body { font-family: "Times New Roman", Times, serif; font-size: 12pt; line-height: 1.5; padding: 2cm; }
+  h1 { font-size: 16pt; text-align: center; text-transform: uppercase; font-weight: bold; }
+  h2 { font-size: 14pt; text-align: center; text-transform: uppercase; font-weight: bold; margin-bottom: 30px; }
+  h3 { font-size: 12pt; font-weight: bold; margin-top: 20px; text-decoration: underline; background-color: #e6e6e6; padding: 5px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; border: 1pt solid black; }
+  th, td { border: 1pt solid black; padding: 8px; vertical-align: top; }
+  .td-bold { font-weight: bold; background-color: #f2f2f2; width: 30%; }
+</style>
+</head>
+<body>
+
+<h1>DOKUMEN SKENARIO USE CASE LENGKAP</h1>
+<h2>SISTEM ALUMNI TRACKER (METODE OSINT)</h2>
+
+<p>Sistem Alumni Tracker memiliki banyak fitur yang terbagi ke dalam tiga sub-sistem utama. Dokumen ini merangkum seluruh skenario interaksi antara <b>User</b> dengan masing-masing dari ketiga sub-sistem tersebut.</p>
+
+<h3>BAGIAN 1: SUB-SISTEM MANAJEMEN DATA</h3>
+<table>
+  <tr><td class="td-bold">Melihat Statistik Dashboard</td><td>User masuk ke halaman utama aplikasi dan sistem menampilkan metrik <i>real-time</i> OSINT, jumlah sasaran, dan log aktivitas terkini dari pelacakan pangkalan data target.</td></tr>
+  <tr><td class="td-bold">Mengelola Data Master Alumni</td><td>User meninjau data mentah, sistem menggelar rekaman data asli (Excel/Supabase), dan User bisa memfilter mana yang sudah atau belum teridentifikasi.</td></tr>
+  <tr><td class="td-bold">Menambahkan Alumni Manual (PDDikti)</td><td>User menginputkan NIM atau Nama pada modal pencarian, sistem mengirim kueri <i>live</i> ke PDDikti, dan User mendaftarkannya sebagai target operasi ke dalam <i>database</i> lokal.</td></tr>
+</table>
+
+<h3>BAGIAN 2: SUB-SISTEM TRACKING ENGINE (PELACAKAN OSINT)</h3>
+<table>
+  <tr><td class="td-bold">Konfigurasi Modul &amp; Batasan Data</td><td>User memilih modul intelijen *open-source* yang akan digunakan (misal Tracer UMM, PDDikti, LinkedIn Bot) dan memilih jumlah <i>Limit Batasan</i> eksekusi untuk mengendalikan kuota <i>scraping</i>.</td></tr>
+  <tr><td class="td-bold">Jalankan Pelacakan Otomatis</td><td>User menekan tombol eksekusi, sistem secara beruntun memanggil mesin pencari dan memodifikasi status setiap profil menjadi "Teridentifikasi" jika URL Sosmed / Karier riil ditemukan.</td></tr>
+  <tr><td class="td-bold">Meninjau Jejak Bukti Digital</td><td>User membuka menu Jejak Bukti (Evidence), sistem menampilkan tabel audit komprehensif berisi rekaman log pencarian, persentase kebenaran (<i>Confidence Score</i>), serta cuplikan informasi dari lokasi pelacakan.</td></tr>
+</table>
+
+<h3>BAGIAN 3: SUB-SISTEM PELAPORAN &amp; VALIDASI</h3>
+<table>
+  <tr><td class="td-bold">Eksplorasi Hasil Identifikasi</td><td>User membuka tab Hasil, sistem memanggil lebih dari 100 ribu data berpaginasi. User menginputkan Nomor Induk / Tahun Masuk dan sistem akan secara <i>real-time</i> menyajikan data lulusan siap inspeksi.</td></tr>
+  <tr><td class="td-bold">Mengatur Filter Rubrik ISO 25010</td><td>User mengaktif-nonaktifkan aspek penilaian (Coverage, Accuracy, Completeness) melalui <i>checkbox</i> di menu Laporan, sistem membagi bobot parameter dan mencetak hasil *Total Point Score* normalisasi.</td></tr>
+  <tr><td class="td-bold">Memvalidasi Akurasi Sosmed</td><td>User disajikan 500 tabel sampel QA khusus (2015 ke atas), lalu User menekan logo ikon LinkedIn/IG di dalam tabel tersebut. Sistem membuka tab baru dan mengarahkan User membuktikan validitas aslinya dunia maya.</td></tr>
+</table>
+
+<p><i>Keterangan: Ketiga bagian ini merepresentasikan 3 file gambar diagram Use Case berbeda yang saling terintegrasi satu sama lain.</i></p>
+
+</body>
+</html>
