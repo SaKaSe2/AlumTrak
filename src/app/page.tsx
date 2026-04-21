@@ -477,6 +477,9 @@ export default function Home() {
     const updatedAlumni = [...alumni];
     const newEvidence = [...evidence];
 
+    let consecutiveFails = 0; // Counter gagal berturut-turut untuk auto-stop
+    const MAX_CONSECUTIVE_FAILS = 5; // Batas toleransi sebelum auto-stop
+
     for (let idx = 0; idx < targets.length; idx++) {
       // Cek apakah user menekan STOP
       if (stopRequested.current) {
@@ -509,18 +512,25 @@ export default function Home() {
       let osintData: any = null;
       let linkedinData: any = null;
       let tracerUmmData: any = null;
+      let apiBlocked = false; // Flag deteksi rate-limit / CAPTCHA
 
       // Sumber 1: GitHub REST API
       try {
         const osintRes = await fetch(`/api/osint?q=${encodeURIComponent(a.nama)}`);
-        const osintJson = await osintRes.json();
-        if(osintJson.success) osintData = osintJson.data;
+        // Deteksi rate-limit dari GitHub (403 atau 429)
+        if (osintRes.status === 429 || osintRes.status === 403) {
+          addLogContext(`  [BLOCK] GitHub API rate-limit terdeteksi (HTTP ${osintRes.status}). Auto-stopping...`, 'c-warn');
+          apiBlocked = true;
+        } else {
+          const osintJson = await osintRes.json();
+          if(osintJson.success) osintData = osintJson.data;
+        }
       } catch {
          // Silently fail
       }
 
       // Sumber 2: LinkedIn Bot (Puppeteer Stealth via Backend Render)
-      if (!stopRequested.current) {
+      if (!stopRequested.current && !apiBlocked) {
         let liAttempts = 0;
         let liSuccess = false;
         while (liAttempts < 3 && !liSuccess && !stopRequested.current) {
@@ -533,7 +543,19 @@ export default function Home() {
               addLogContext(`  -> [BOT] Memeriksa LinkedIn untuk ${a.nama}...`, 'c-sys');
             }
             const liRes = await fetch(`/api/osint-bot?target=${encodeURIComponent(a.nama)}`);
+            // Deteksi rate-limit / CAPTCHA dari LinkedIn search
+            if (liRes.status === 429 || liRes.status === 403) {
+              addLogContext(`  [BLOCK] LinkedIn/DuckDuckGo CAPTCHA terdeteksi (HTTP ${liRes.status}). Auto-stopping...`, 'c-warn');
+              apiBlocked = true;
+              break;
+            }
             const liJson = await liRes.json();
+            // Deteksi error message yang mengandung kata kunci CAPTCHA
+            if (liJson.error && (liJson.error.includes('captcha') || liJson.error.includes('blocked') || liJson.error.includes('rate'))) {
+              addLogContext(`  [BLOCK] API terblokir: ${liJson.error}. Auto-stopping...`, 'c-warn');
+              apiBlocked = true;
+              break;
+            }
             if(liJson.success && liJson.data) {
               linkedinData = liJson.data;
               addLogContext(`  [OK] LinkedIn HIT: ${linkedinData.headline || linkedinData.name}`, 'c-ok');
@@ -551,7 +573,7 @@ export default function Home() {
       }
 
       // Sumber 3: Tracer Study UMM
-      if (!stopRequested.current) {
+      if (!stopRequested.current && !apiBlocked) {
         try {
           addLogContext(`  -> [BOT] Tracer UMM untuk ${a.nama}...`, 'c-sys');
           const tracerRes = await fetch(`/api/osint-tracer-umm?target=${encodeURIComponent(a.nama)}&nim=${encodeURIComponent(a.nim || '')}`);
@@ -567,28 +589,50 @@ export default function Home() {
         }
       }
 
+      // Jika API terblokir, langsung auto-stop
+      if (apiBlocked) {
+        addLogContext(`\n[AUTO-STOP] API rate-limit/CAPTCHA terdeteksi! Menghentikan otomatis dan menyimpan progress...`, 'c-warn');
+        stopRequested.current = true;
+        // Simpan alumni terakhir ini juga agar tidak diulang
+        a.status = 'Belum Ditemukan';
+        a.confidence = 0.05;
+        a.tglUpdate = new Date().toISOString().slice(0,10);
+        try {
+          await supabase.from('alumni').update({
+            status: a.status, confidence: a.confidence, updated_at: new Date().toISOString()
+          }).eq('id', a.id);
+        } catch {}
+        break;
+      }
+
       // Sumber 4: Facebook (jika aktif)
       let fbData: any = null;
-      if (activeSrc.includes('Facebook') && !stopRequested.current) {
+      if (activeSrc.includes('Facebook') && !stopRequested.current && !apiBlocked) {
         try {
           const fbRes = await fetch(`/api/osint-social?target=${encodeURIComponent(a.nama)}&platform=facebook`);
-          const fbJson = await fbRes.json();
-          if (fbJson.success && fbJson.data) {
-            fbData = fbJson.data;
-            addLogContext(`  [OK] Facebook HIT: ${fbData.url}`, 'c-ok');
+          if (fbRes.status === 429 || fbRes.status === 403) { apiBlocked = true; }
+          else {
+            const fbJson = await fbRes.json();
+            if (fbJson.success && fbJson.data) {
+              fbData = fbJson.data;
+              addLogContext(`  [OK] Facebook HIT: ${fbData.url}`, 'c-ok');
+            }
           }
         } catch {}
       }
 
       // Sumber 5: Instagram (jika aktif)
       let igData: any = null;
-      if (activeSrc.includes('Instagram') && !stopRequested.current) {
+      if (activeSrc.includes('Instagram') && !stopRequested.current && !apiBlocked) {
         try {
           const igRes = await fetch(`/api/osint-social?target=${encodeURIComponent(a.nama)}&platform=instagram`);
-          const igJson = await igRes.json();
-          if (igJson.success && igJson.data) {
-            igData = igJson.data;
-            addLogContext(`  [OK] Instagram HIT: ${igData.url}`, 'c-ok');
+          if (igRes.status === 429 || igRes.status === 403) { apiBlocked = true; }
+          else {
+            const igJson = await igRes.json();
+            if (igJson.success && igJson.data) {
+              igData = igJson.data;
+              addLogContext(`  [OK] Instagram HIT: ${igData.url}`, 'c-ok');
+            }
           }
         } catch {}
       }
@@ -670,6 +714,7 @@ export default function Home() {
 
         addLogContext(`[HIT] ${a.nama} -> Teridentifikasi (${Math.round(a.confidence*100)}%)`, 'c-ok');
         setTrackingProgress(prev => ({...prev, found: prev.found + 1}));
+        consecutiveFails = 0; // Reset counter karena berhasil
         
         newEvidence.push({
           aId: a.id, sumber: osintData ? 'Github API' : (hasPddikti ? 'PDDikti' : (a.sources[0] || 'Web Search')), jabatan: a.jabatan, instansi: a.instansi,
@@ -685,12 +730,20 @@ export default function Home() {
         a.confidence = Math.min((0.35 + Math.random() * 0.25) + bonusPddikti, 0.74);
         addLogContext(`[WARN] ${a.nama} -> Perlu Verifikasi Manual`, 'c-warn');
         setTrackingProgress(prev => ({...prev, failed: prev.failed + 1}));
+        consecutiveFails++;
       }
       else {
         a.status = 'Belum Ditemukan';
         a.confidence = hasPddikti ? 0.15 : 0.1;
         addLogContext(`[FAIL] ${a.nama} -> Tidak ditemukan`, 'c-warn');
         setTrackingProgress(prev => ({...prev, failed: prev.failed + 1}));
+        consecutiveFails++;
+      }
+
+      // Auto-stop jika terlalu banyak gagal berturut-turut (kemungkinan API exhausted)
+      if (consecutiveFails >= MAX_CONSECUTIVE_FAILS) {
+        addLogContext(`\n[AUTO-STOP] ${MAX_CONSECUTIVE_FAILS}x gagal berturut-turut terdeteksi. Kemungkinan API exhausted. Menghentikan dan menyimpan...`, 'c-warn');
+        stopRequested.current = true;
       }
       a.tglUpdate = new Date().toISOString().slice(0,10);
 
