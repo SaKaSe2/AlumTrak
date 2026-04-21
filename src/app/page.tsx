@@ -462,6 +462,9 @@ export default function Home() {
       } else {
         addLogContext(`  [WARN] ${target.nama} -> ${result.keterangan || 'Tidak ditemukan'}`, 'c-warn');
       }
+
+      // Jeda 800ms agar server PDDikti tidak crash/block IP kita
+      await new Promise(r => setTimeout(r, 800));
     }
 
     if (!stopRequested.current) {
