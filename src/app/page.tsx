@@ -448,27 +448,31 @@ export default function Home() {
     addLogContext('[INFO] Mode RESUME aktif: alumni yang sudah terlacak akan dilewati otomatis.', 'c-sys');
     addLogContext('[INFO] Tekan tombol STOP jika API key habis, progress tersimpan per-alumni.', 'c-sys');
 
-    // Langkah 0: Verifikasi PDDikti untuk setiap target (skip jika diminta stop)
-    addLogContext('[EXEC] Langkah 0: Verifikasi data resmi via PDDikti API...', 'c-sys');
+    // Langkah 0: Verifikasi PDDikti untuk setiap target (skip jika diminta stop atau dinonaktifkan)
     const pddiktiResults: Record<number, PDDiktiResult> = {};
-    for (const target of targets) {
-      if (stopRequested.current) break;
-      addLogContext(`  -> Querying PDDikti for: ${target.nama}...`, 'c-sys');
-      const result = await verifikasiPDDikti(target);
-      pddiktiResults[target.id] = result;
+    if (activeSrc.includes('PDDikti')) {
+      addLogContext('[EXEC] Langkah 0: Verifikasi data resmi via PDDikti API...', 'c-sys');
+      for (const target of targets) {
+        if (stopRequested.current) break;
+        addLogContext(`  -> Querying PDDikti for: ${target.nama}...`, 'c-sys');
+        const result = await verifikasiPDDikti(target);
+        pddiktiResults[target.id] = result;
 
-      if (result.status_pddikti === 'TERVERIFIKASI_RESMI') {
-        addLogContext(`  [OK] ${target.nama} -> TERVERIFIKASI. NIM: ${result.nim}`, 'c-ok');
-      } else {
-        addLogContext(`  [WARN] ${target.nama} -> ${result.keterangan || 'Tidak ditemukan'}`, 'c-warn');
+        if (result.status_pddikti === 'TERVERIFIKASI_RESMI') {
+          addLogContext(`  [OK] ${target.nama} -> TERVERIFIKASI. NIM: ${result.nim}`, 'c-ok');
+        } else {
+          addLogContext(`  [WARN] ${target.nama} -> ${result.keterangan || 'Tidak ditemukan'}`, 'c-warn');
+        }
+
+        // Jeda 800ms agar server PDDikti tidak crash/block IP kita
+        await new Promise(r => setTimeout(r, 800));
       }
 
-      // Jeda 800ms agar server PDDikti tidak crash/block IP kita
-      await new Promise(r => setTimeout(r, 800));
-    }
-
-    if (!stopRequested.current) {
-      addLogContext(`[DONE] Langkah 0 selesai. Memulai pencarian per-alumni...`, 'c-ok');
+      if (!stopRequested.current) {
+        addLogContext(`[DONE] Langkah 0 selesai. Memulai pencarian per-alumni...`, 'c-ok');
+      }
+    } else {
+      addLogContext(`[SKIP] Verifikasi PDDikti dimatikan. Menggunakan data Excel langsung...`, 'c-warn');
     }
 
     // Langsung eksekusi finishJob tanpa delay animasi palsu
