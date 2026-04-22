@@ -515,85 +515,76 @@ export default function Home() {
         }
       }
 
-      // AUTOMATED HARD DATA SCRAPING
+      // AUTOMATED HARD DATA SCRAPING (PARALLEL MODE - semua sumber dijalankan bersamaan)
       let osintData: any = null;
       let linkedinData: any = null;
       let tracerUmmData: any = null;
-      let apiBlocked = false; // Flag deteksi rate-limit / CAPTCHA
+      let apiBlocked = false;
 
-      // Sumber 1: GitHub REST API
-      try {
-        const osintRes = await fetch(`/api/osint?q=${encodeURIComponent(a.nama)}`);
-        // Deteksi rate-limit dari GitHub (403 atau 429)
-        if (osintRes.status === 429 || osintRes.status === 403) {
-          addLogContext(`  [BLOCK] GitHub API rate-limit terdeteksi (HTTP ${osintRes.status}). Auto-stopping...`, 'c-warn');
-          apiBlocked = true;
-        } else {
-          const osintJson = await osintRes.json();
-          if(osintJson.success) osintData = osintJson.data;
-        }
-      } catch {
-         // Silently fail
-      }
+      addLogContext(`  -> [PARALLEL] Memulai GitHub + LinkedIn + Tracer UMM secara bersamaan...`, 'c-sys');
 
-      // Sumber 2: LinkedIn Bot (Puppeteer Stealth via Backend Render)
-      if (!stopRequested.current && !apiBlocked) {
-        let liAttempts = 0;
-        let liSuccess = false;
-        while (liAttempts < 3 && !liSuccess && !stopRequested.current) {
-          liAttempts++;
+      // Jalankan semua sumber OSINT secara paralel untuk mempercepat pelacakan
+      const [ghResult, liResult, trResult] = await Promise.allSettled([
+        // Sumber 1: GitHub REST API
+        (async () => {
           try {
-            if (liAttempts > 1) {
-              addLogContext(`  -> [BOT] Retry ${liAttempts-1}: LinkedIn untuk ${a.nama}...`, 'c-sys');
-              await new Promise(r => setTimeout(r, 1000));
-            } else {
-              addLogContext(`  -> [BOT] Memeriksa LinkedIn untuk ${a.nama}...`, 'c-sys');
-            }
+            const osintRes = await fetch(`/api/osint?q=${encodeURIComponent(a.nama)}`);
+            if (osintRes.status === 429 || osintRes.status === 403) return { blocked: true };
+            const osintJson = await osintRes.json();
+            if (osintJson.success) return { success: true, data: osintJson.data };
+          } catch {}
+          return { success: false };
+        })(),
+
+        // Sumber 2: LinkedIn Bot (tanpa retry berlebihan)
+        (async () => {
+          try {
             const liRes = await fetch(`/api/osint-bot?target=${encodeURIComponent(a.nama)}`);
-            // Deteksi rate-limit / CAPTCHA dari LinkedIn search
-            if (liRes.status === 429 || liRes.status === 403) {
-              addLogContext(`  [BLOCK] LinkedIn/DuckDuckGo CAPTCHA terdeteksi (HTTP ${liRes.status}). Auto-stopping...`, 'c-warn');
-              apiBlocked = true;
-              break;
-            }
+            if (liRes.status === 429 || liRes.status === 403) return { blocked: true };
             const liJson = await liRes.json();
-            // Deteksi error message yang mengandung kata kunci CAPTCHA
             if (liJson.error && (liJson.error.includes('captcha') || liJson.error.includes('blocked') || liJson.error.includes('rate'))) {
-              addLogContext(`  [BLOCK] API terblokir: ${liJson.error}. Auto-stopping...`, 'c-warn');
-              apiBlocked = true;
-              break;
+              return { blocked: true };
             }
-            if(liJson.success && liJson.data) {
-              linkedinData = liJson.data;
-              addLogContext(`  [OK] LinkedIn HIT: ${linkedinData.headline || linkedinData.name}`, 'c-ok');
-              liSuccess = true;
-            } else if (liJson.data && liJson.data.totalChecked > 0) {
-              addLogContext(`  [WARN] LinkedIn: ${liJson.data.totalChecked} profil diperiksa, tidak cocok.`, 'c-warn');
-              liSuccess = true;
-            } else {
-              addLogContext(`  [WARN] LinkedIn: ${liJson.error || 'Gagal'}`, 'c-warn');
-            }
-          } catch (err) {
-            addLogContext(`  [WARN] LinkedIn timeout untuk ${a.nama}`, 'c-warn');
+            if (liJson.success && liJson.data) return { success: true, data: liJson.data };
+            if (liJson.data && liJson.data.totalChecked > 0) return { success: false, checked: liJson.data.totalChecked };
+            return { success: false, error: liJson.error };
+          } catch {
+            return { success: false, error: 'timeout' };
           }
-        }
+        })(),
+
+        // Sumber 3: Tracer Study UMM
+        (async () => {
+          try {
+            const tracerRes = await fetch(`/api/osint-tracer-umm?target=${encodeURIComponent(a.nama)}&nim=${encodeURIComponent(a.nim || '')}`);
+            const tracerJson = await tracerRes.json();
+            if (tracerJson.success && tracerJson.data) return { success: true, data: tracerJson.data };
+          } catch {}
+          return { success: false };
+        })(),
+      ]);
+
+      // Proses hasil GitHub
+      if (ghResult.status === 'fulfilled') {
+        const gh = ghResult.value as any;
+        if (gh.blocked) { apiBlocked = true; addLogContext(`  [BLOCK] GitHub rate-limit.`, 'c-warn'); }
+        else if (gh.success) { osintData = gh.data; }
       }
 
-      // Sumber 3: Tracer Study UMM
-      if (!stopRequested.current && !apiBlocked) {
-        try {
-          addLogContext(`  -> [BOT] Tracer UMM untuk ${a.nama}...`, 'c-sys');
-          const tracerRes = await fetch(`/api/osint-tracer-umm?target=${encodeURIComponent(a.nama)}&nim=${encodeURIComponent(a.nim || '')}`);
-          const tracerJson = await tracerRes.json();
-          if(tracerJson.success && tracerJson.data) {
-            tracerUmmData = tracerJson.data;
-            addLogContext(`  [OK] Tracer UMM HIT: ${tracerUmmData.instansi}`, 'c-ok');
-          } else {
-            addLogContext(`  [WARN] Tracer UMM: Belum mengisi kuesioner`, 'c-sys');
-          }
-        } catch {
-           // Silently fail
-        }
+      // Proses hasil LinkedIn
+      if (liResult.status === 'fulfilled') {
+        const li = liResult.value as any;
+        if (li.blocked) { apiBlocked = true; addLogContext(`  [BLOCK] LinkedIn/DDG CAPTCHA.`, 'c-warn'); }
+        else if (li.success) { linkedinData = li.data; addLogContext(`  [OK] LinkedIn HIT: ${li.data.headline || li.data.name}`, 'c-ok'); }
+        else if (li.checked) { addLogContext(`  [WARN] LinkedIn: ${li.checked} profil diperiksa, tidak cocok.`, 'c-warn'); }
+        else { addLogContext(`  [WARN] LinkedIn: ${li.error || 'Tidak ditemukan'}`, 'c-warn'); }
+      }
+
+      // Proses hasil Tracer UMM
+      if (trResult.status === 'fulfilled') {
+        const tr = trResult.value as any;
+        if (tr.success) { tracerUmmData = tr.data; addLogContext(`  [OK] Tracer UMM HIT: ${tr.data.instansi || tr.data.email}`, 'c-ok'); }
+        else { addLogContext(`  [WARN] Tracer UMM: Belum mengisi kuesioner`, 'c-sys'); }
       }
 
       // Jika API terblokir, langsung auto-stop
