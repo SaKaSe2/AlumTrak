@@ -595,7 +595,7 @@ export default function Home() {
             status: a.status, confidence: a.confidence, updated_at: new Date().toISOString()
           }).eq('id', a.id);
         } catch {}
-        break;
+        return {found: false, failed: true, blocked: true};
       }
 
       // Sumber 4: Facebook (jika aktif)
