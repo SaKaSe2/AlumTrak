@@ -484,22 +484,17 @@ export default function Home() {
     const updatedAlumni = [...alumni];
     const newEvidence = [...evidence];
 
-    let consecutiveFails = 0; // Counter gagal berturut-turut untuk auto-stop
-    const MAX_CONSECUTIVE_FAILS = 5; // Batas toleransi sebelum auto-stop
+    let consecutiveFails = 0;
+    const MAX_CONSECUTIVE_FAILS = 8; // Toleransi lebih tinggi untuk batch mode
+    const BATCH_SIZE = 3; // Jumlah alumni yang diproses bersamaan
 
-    for (let idx = 0; idx < targets.length; idx++) {
-      // Cek apakah user menekan STOP
-      if (stopRequested.current) {
-        addLogContext(`[PAUSED] Pelacakan dihentikan pada alumni ke-${idx}/${targets.length}. Jalankan ulang untuk melanjutkan dari sisa target.`, 'c-warn');
-        break;
-      }
+    addLogContext(`[INFO] Mode BATCH aktif: ${BATCH_SIZE} alumni diproses bersamaan per gelombang.`, 'c-sys');
 
-      const t = targets[idx];
+    // Fungsi pemrosesan 1 alumni (akan dipanggil secara paralel)
+    const processOneAlumni = async (t: Alumni, idx: number): Promise<{found: boolean, failed: boolean, blocked: boolean}> => {
       const a = updatedAlumni.find(x => x.id === t.id);
-      if(!a) continue;
+      if(!a) return {found: false, failed: false, blocked: false};
 
-      // Update progress counter
-      setTrackingProgress(prev => ({...prev, current: idx + 1}));
       addLogContext(`\n[TRACK ${idx+1}/${targets.length}] Memproses: ${a.nama} (ID: ${a.id})`, 'c-sys');
 
       // Simpan data PDDikti ke record alumni
@@ -639,10 +634,11 @@ export default function Home() {
       const bonusPddikti = hasPddikti ? 0.15 : 0;
       
       const r = Math.random();
+      let wasFound = false;
       
       // Jika salah satu sumber OSINT menemukan Hard Data
       if(osintData || linkedinData || tracerUmmData || r > 0.5) {
-        f++;
+        wasFound = true;
         a.status = 'Teridentifikasi';
         a.confidence = (osintData || linkedinData || tracerUmmData) ? 0.95 : Math.min((0.60 + Math.random() * 0.25) + bonusPddikti, 1.0);
         a.instansi = (linkedinData && linkedinData.company) ? linkedinData.company : ((osintData && osintData.instansi) ? osintData.instansi : (tracerUmmData ? tracerUmmData.instansi : ''));
@@ -711,8 +707,6 @@ export default function Home() {
         }
 
         addLogContext(`[HIT] ${a.nama} -> Teridentifikasi (${Math.round(a.confidence*100)}%)`, 'c-ok');
-        setTrackingProgress(prev => ({...prev, found: prev.found + 1}));
-        consecutiveFails = 0; // Reset counter karena berhasil
         
         newEvidence.push({
           aId: a.id, sumber: osintData ? 'Github API' : (hasPddikti ? 'PDDikti' : (a.sources[0] || 'Web Search')), jabatan: a.jabatan, instansi: a.instansi,
@@ -723,29 +717,20 @@ export default function Home() {
         });
       }
       else if(r > 0.2) {
-        v++;
         a.status = 'Perlu Verifikasi';
         a.confidence = Math.min((0.35 + Math.random() * 0.25) + bonusPddikti, 0.74);
         addLogContext(`[WARN] ${a.nama} -> Perlu Verifikasi Manual`, 'c-warn');
-        setTrackingProgress(prev => ({...prev, failed: prev.failed + 1}));
-        consecutiveFails++;
       }
       else {
         a.status = 'Belum Ditemukan';
         a.confidence = hasPddikti ? 0.15 : 0.1;
         addLogContext(`[FAIL] ${a.nama} -> Tidak ditemukan`, 'c-warn');
-        setTrackingProgress(prev => ({...prev, failed: prev.failed + 1}));
-        consecutiveFails++;
       }
 
-      // Auto-stop jika terlalu banyak gagal berturut-turut (kemungkinan API exhausted)
-      if (consecutiveFails >= MAX_CONSECUTIVE_FAILS) {
-        addLogContext(`\n[AUTO-STOP] ${MAX_CONSECUTIVE_FAILS}x gagal berturut-turut terdeteksi. Kemungkinan API exhausted. Menghentikan dan menyimpan...`, 'c-warn');
-        stopRequested.current = true;
-      }
+      // Auto-stop jika terlalu banyak gagal berturut-turut
       a.tglUpdate = new Date().toISOString().slice(0,10);
 
-      // SAVE PER-ALUMNI langsung ke Supabase (agar progress tidak hilang)
+      // SAVE PER-ALUMNI langsung ke Supabase
       try {
         await supabase.from('alumni').update({
           status: a.status, confidence: a.confidence, jabatan: a.jabatan, instansi: a.instansi,
@@ -759,8 +744,42 @@ export default function Home() {
         console.error(`[DB] Gagal simpan ${a.nama}:`, err);
       }
 
-      // JEDA PENDINGINAN: Beri jeda 1 detik sebelum lanjut ke profil berikutnya agar API OSINT tidak timeout/crash
-      await new Promise(r => setTimeout(r, 1000));
+      return {found: wasFound, failed: !wasFound, blocked: apiBlocked};
+    };
+
+    // BATCH LOOP: Proses 3 alumni bersamaan per gelombang
+    for (let batchStart = 0; batchStart < targets.length; batchStart += BATCH_SIZE) {
+      if (stopRequested.current) {
+        addLogContext(`[PAUSED] Pelacakan dihentikan. Jalankan ulang untuk melanjutkan.`, 'c-warn');
+        break;
+      }
+
+      const batchEnd = Math.min(batchStart + BATCH_SIZE, targets.length);
+      const batch = targets.slice(batchStart, batchEnd);
+
+      // Jalankan batch secara paralel
+      const results = await Promise.allSettled(
+        batch.map((t, i) => processOneAlumni(t, batchStart + i))
+      );
+
+      // Proses hasil batch
+      for (const r of results) {
+        if (r.status === 'fulfilled') {
+          if (r.value.found) { f++; consecutiveFails = 0; }
+          if (r.value.failed) { v++; consecutiveFails++; }
+          if (r.value.blocked) { stopRequested.current = true; }
+        }
+      }
+
+      setTrackingProgress(prev => ({...prev, current: batchEnd, found: f, failed: v}));
+
+      if (consecutiveFails >= MAX_CONSECUTIVE_FAILS) {
+        addLogContext(`\n[AUTO-STOP] ${MAX_CONSECUTIVE_FAILS}x gagal berturut-turut. API kemungkinan habis.`, 'c-warn');
+        stopRequested.current = true;
+      }
+
+      // Jeda 500ms antar batch (bukan per alumni)
+      if (!stopRequested.current) await new Promise(r => setTimeout(r, 500));
     }
 
     setAlumni(updatedAlumni);
