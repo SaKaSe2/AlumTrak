@@ -486,7 +486,7 @@ export default function Home() {
 
     let consecutiveFails = 0;
     const MAX_CONSECUTIVE_FAILS = 10; // Toleransi lebih tinggi untuk batch mode
-    const BATCH_SIZE = 5; // Jumlah alumni yang diproses bersamaan
+    const BATCH_SIZE = 3; // Dikembalikan ke 3 untuk mencegah Out of Memory (OOM) di server Render
 
     addLogContext(`[INFO] Mode BATCH aktif: ${BATCH_SIZE} alumni diproses bersamaan per gelombang.`, 'c-sys');
 
