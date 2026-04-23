@@ -58,6 +58,7 @@ const initialSources: Source[] = [
   {nama:'GitHub',tipe:'sp-tech',kelas:'Teknis',aktif:true,icon:'💻'},
   {nama:'Instagram',tipe:'sp-social',kelas:'Sosmed',aktif:false,icon:'📷'},
   {nama:'Facebook',tipe:'sp-social',kelas:'Sosmed',aktif:false,icon:'👍'},
+  {nama:'Grok AI',tipe:'sp-ai',kelas:'AI Profiling',aktif:true,icon:'🧠'},
 ];
 
 export default function Home() {
@@ -727,6 +728,58 @@ export default function Home() {
         addLogContext(`[FAIL] ${a.nama} -> Tidak ditemukan`, 'c-warn');
       }
 
+      // Sumber 6: Grok AI (mengisi field kosong setelah penentuan status)
+      if (activeSrc.includes('Grok AI') && !stopRequested.current && !apiBlocked) {
+        const emptyFields = [
+          !a.sosmed_linkedin, !a.sosmed_ig, !a.sosmed_fb, !a.sosmed_tiktok,
+          !a.email, !a.noHp, !a.tempatBekerja, !a.posisi, !a.jenisPekerjaan
+        ].filter(Boolean).length;
+
+        // Hanya panggil Grok jika masih ada field kosong (hemat token)
+        if (emptyFields > 2) {
+          try {
+            const fakultas = a.bidang || '';
+            const grokRes = await fetch(`/api/osint-grok?nama=${encodeURIComponent(a.nama)}&prodi=${encodeURIComponent(a.prodi)}&fakultas=${encodeURIComponent(fakultas)}`);
+            
+            if (grokRes.status === 429 || grokRes.status === 402) {
+              addLogContext(`  [BLOCK] Grok AI: ${grokRes.status === 402 ? 'Credit habis' : 'Rate limit'}`, 'c-warn');
+              apiBlocked = true;
+            } else if (grokRes.ok) {
+              const grokJson = await grokRes.json();
+              if (grokJson.success && grokJson.data) {
+                const g = grokJson.data;
+                // Isi field yang masih kosong saja (tidak menimpa data dari sumber lain)
+                if (!a.sosmed_linkedin && g.sosmed_linkedin) a.sosmed_linkedin = g.sosmed_linkedin;
+                if (!a.sosmed_ig && g.sosmed_ig) a.sosmed_ig = g.sosmed_ig;
+                if (!a.sosmed_fb && g.sosmed_fb) a.sosmed_fb = g.sosmed_fb;
+                if (!a.sosmed_tiktok && g.sosmed_tiktok) a.sosmed_tiktok = g.sosmed_tiktok;
+                if (!a.email && g.email) a.email = g.email;
+                if (!a.noHp && g.no_hp) a.noHp = g.no_hp;
+                if (!a.tempatBekerja && g.tempat_bekerja) a.tempatBekerja = g.tempat_bekerja;
+                if (!a.alamatBekerja && g.alamat_bekerja) a.alamatBekerja = g.alamat_bekerja;
+                if (!a.posisi && g.posisi) a.posisi = g.posisi;
+                if (!a.jenisPekerjaan && g.jenis_pekerjaan) a.jenisPekerjaan = g.jenis_pekerjaan;
+                if (!a.sosmed_tempatBekerja && g.sosmed_tempat_bekerja) a.sosmed_tempatBekerja = g.sosmed_tempat_bekerja;
+                
+                a.sources.push('Grok AI');
+                addLogContext(`  [OK] Grok AI: ${grokJson.filledCount} field terisi`, 'c-ok');
+
+                // Jika sebelumnya belum ditemukan, upgrade status karena Grok menemukan data
+                if (a.status !== 'Teridentifikasi' && grokJson.filledCount >= 3) {
+                  wasFound = true;
+                  a.status = 'Teridentifikasi';
+                  a.confidence = Math.max(a.confidence, 0.70);
+                }
+              } else {
+                addLogContext(`  [WARN] Grok AI: Tidak ada data ditemukan`, 'c-sys');
+              }
+            }
+          } catch {
+            addLogContext(`  [WARN] Grok AI: Timeout/error`, 'c-warn');
+          }
+        }
+      }
+
       // Auto-stop jika terlalu banyak gagal berturut-turut
       a.tglUpdate = new Date().toISOString().slice(0,10);
 
@@ -735,9 +788,10 @@ export default function Home() {
         await supabase.from('alumni').update({
           status: a.status, confidence: a.confidence, jabatan: a.jabatan, instansi: a.instansi,
           lokasi: a.lokasi, sources: a.sources, sosmed_linkedin: a.sosmed_linkedin,
-          sosmed_fb: a.sosmed_fb, sosmed_ig: a.sosmed_ig, email: a.email,
-          no_hp: a.noHp, posisi: a.posisi, tempat_bekerja: a.tempatBekerja,
+          sosmed_fb: a.sosmed_fb, sosmed_ig: a.sosmed_ig, sosmed_tiktok: a.sosmed_tiktok,
+          email: a.email, no_hp: a.noHp, posisi: a.posisi, tempat_bekerja: a.tempatBekerja,
           alamat_bekerja: a.alamatBekerja, sosmed_tempat_bekerja: a.sosmed_tempatBekerja,
+          jenis_pekerjaan: a.jenisPekerjaan,
           updated_at: new Date().toISOString()
         }).eq('id', a.id);
       } catch(err) {
