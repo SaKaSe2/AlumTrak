@@ -485,8 +485,8 @@ export default function Home() {
     const newEvidence = [...evidence];
 
     let consecutiveFails = 0;
-    const MAX_CONSECUTIVE_FAILS = 10; // Toleransi lebih tinggi untuk batch mode
-    const BATCH_SIZE = 3; // Dikembalikan ke 3 untuk mencegah Out of Memory (OOM) di server Render
+    const MAX_CONSECUTIVE_FAILS = 10;
+    const BATCH_SIZE = 2; // Aman dari OOM dan Vercel Timeout
 
     addLogContext(`[INFO] Mode BATCH aktif: ${BATCH_SIZE} alumni diproses bersamaan per gelombang.`, 'c-sys');
 

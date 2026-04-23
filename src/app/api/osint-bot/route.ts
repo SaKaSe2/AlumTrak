@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     const res = await fetch(fetchUrl, {
       method: 'GET',
       headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(55000)
+      signal: AbortSignal.timeout(20000) // Turunkan dari 55s ke 20s agar tidak hang
     });
     
     const json = await res.json();
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
     console.log('[LinkedIn Proxy] Fallback fetch DDG Native di URL:', ddgUrl);
     
     // Gunakan Vercel native fetch
-    const searchRes = await fetch(ddgUrl, { headers, signal: AbortSignal.timeout(10000) });
+    const searchRes = await fetch(ddgUrl, { headers, signal: AbortSignal.timeout(15000) });
     const searchHtml = await searchRes.text();
 
     // Parsing URL LinkedIn dari hasil DDG HTML
