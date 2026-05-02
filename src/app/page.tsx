@@ -211,7 +211,43 @@ export default function Home() {
         
         const { data, error } = await q.range(resPage * 50, (resPage + 1) * 50 - 1).order('id');
         if (error) console.error("Res Fetch Error:", error);
-        if (data && !error) setResData(data);
+        if (data && !error) {
+          const mappedRes = data.map((d: any) => ({
+             id: d.id,
+             nim: d.nim || '',
+             nama: d.nama,
+             prodi: d.program_studi || '',
+             tahun: d.tahun_masuk || '',
+             bidang: d.jenis_pekerjaan || 'Lainnya',
+             optout: false,
+             status: d.status || 'Belum Dilacak',
+             jabatan: d.jabatan || '',
+             instansi: d.instansi || '',
+             lokasi: d.lokasi || '',
+             confidence: d.confidence || 0,
+             sources: d.sources || [],
+             tglUpdate: d.updated_at ? new Date(d.updated_at).toISOString().split('T')[0] : '',
+             variasi: [d.nama],
+             email: d.email || '',
+             noHp: d.no_hp || '',
+             sosmed_linkedin: d.sosmed_linkedin || '',
+             sosmed_ig: d.sosmed_ig || '',
+             sosmed_fb: d.sosmed_fb || '',
+             sosmed_tiktok: d.sosmed_tiktok || '',
+             tempatBekerja: d.tempat_bekerja || '',
+             alamatBekerja: d.alamat_bekerja || '',
+             posisi: d.posisi || '',
+             jenisPekerjaan: d.jenis_pekerjaan || '',
+             sosmed_tempatBekerja: d.sosmed_tempat_bekerja || '',
+             pddikti_status: d.pddikti_status,
+             pddikti_nama: d.pddikti_nama,
+             pddikti_nim: d.pddikti_nim,
+             pddikti_prodi: d.pddikti_prodi,
+             pddikti_pt: d.pddikti_pt,
+             pddikti_url: d.pddikti_url
+          }));
+          setResData(mappedRes);
+        }
         else if (error) setResData([]); // Kosongkan bila error (misal typo)
         setResLoading(false);
       }
