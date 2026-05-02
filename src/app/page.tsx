@@ -1,6 +1,8 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import * as XLSX from 'xlsx';
+
 
 // Types
 interface Alumni {
@@ -920,6 +922,69 @@ export default function Home() {
     );
   }
 
+  const [isExporting, setIsExporting] = useState(false);
+  const exportToExcel = async () => {
+    setIsExporting(true);
+    showToast('Memulai export data, mohon tunggu...', 'ok');
+    try {
+      let q = supabase.from('alumni').select('*');
+      if (resActiveSearch) {
+        q = q.or(`nama.ilike.%${resActiveSearch}%,nim.ilike.%${resActiveSearch}%`);
+      }
+      if (resActiveTahun) {
+        q = q.ilike('tahun_masuk', `%${resActiveTahun}%`);
+      }
+      if (resFilterStatus) {
+        q = q.eq('status', resFilterStatus);
+      } else {
+        q = q.in('status', ['Teridentifikasi', 'Perlu Verifikasi']);
+      }
+      
+      const { data, error } = await q.order('id');
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        showToast('Tidak ada data untuk di-export', 'warn');
+        setIsExporting(false);
+        return;
+      }
+      
+      const exportData = data.map((d: any) => ({
+        NIM: d.nim,
+        Nama: d.nama,
+        'Tahun Masuk': d.tahun_masuk,
+        'Program Studi': d.program_studi,
+        Status: d.status,
+        Confidence: d.confidence,
+        Email: d.email,
+        'No HP': d.no_hp,
+        'Tempat Bekerja': d.tempat_bekerja,
+        'Alamat Bekerja': d.alamat_bekerja,
+        Posisi: d.posisi,
+        Jabatan: d.jabatan,
+        Instansi: d.instansi,
+        'Jenis Pekerjaan': d.jenis_pekerjaan,
+        'LinkedIn': d.sosmed_linkedin,
+        'Instagram': d.sosmed_ig,
+        'Facebook': d.sosmed_fb,
+        'TikTok': d.sosmed_tiktok,
+        'Website Tempat Kerja': d.sosmed_tempat_bekerja,
+        'Sumber Data': Array.isArray(d.sources) ? d.sources.join(', ') : d.sources,
+        'Tgl Update': d.updated_at ? new Date(d.updated_at).toISOString().split('T')[0] : ''
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Alumni");
+      XLSX.writeFile(workbook, `Data_Alumni_${new Date().toISOString().split('T')[0]}.xlsx`);
+      
+      showToast('Export berhasil!', 'ok');
+    } catch (err) {
+      console.error(err);
+      showToast('Gagal melakukan export', 'warn');
+    }
+    setIsExporting(false);
+  };
+
   // --- APP VIEW ---
   const pendingCount = alumni.filter(a => !a.optout && (searchNim ? true : (filterAlumni ? a.status === filterAlumni : a.status !== 'Teridentifikasi'))).length;
   const filteredAlumni = alumni.filter(a => 
@@ -1279,6 +1344,9 @@ export default function Home() {
                          onKeyDown={(e)=>{if(e.key==='Enter'){setResPage(0); setResActiveTahun(resSearchTahun); setResActiveSearch(resSearchString);}}}
                        />
                        <button className="btn btn-outline btn-sm" onClick={()=>{setResPage(0); setResActiveTahun(resSearchTahun); setResActiveSearch(resSearchString);}}>CARI</button>
+                       <button className="btn btn-outline btn-sm" onClick={exportToExcel} disabled={isExporting} style={{borderColor: 'var(--green)', color: 'var(--green)'}}>
+                         {isExporting ? 'EXPORTING...' : 'EXPORT XLSX'}
+                       </button>
                      </div>
                    </div>
                 </div>
