@@ -966,88 +966,98 @@ export default function Home() {
 
   const exportToCSV = async () => {
     setIsExporting(true);
-    showToast('Memulai export data, mohon tunggu...', 'ok');
+    showToast('Memulai persiapan export seluruh data (140k+ baris)...', 'ok');
     try {
-      let q = supabase.from('alumni').select('*');
-      if (resActiveSearch) {
-        q = q.or(`nama.ilike.%${resActiveSearch}%,nim.ilike.%${resActiveSearch}%`);
-      }
-      if (resActiveTahun) {
-        q = q.ilike('tahun_masuk', `%${resActiveTahun}%`);
-      }
-      if (resFilterStatus) {
-        q = q.eq('status', resFilterStatus);
-      } else {
-        q = q.in('status', ['Teridentifikasi', 'Perlu Verifikasi']);
+      let allData: any[] = [];
+      let from = 0;
+      const limit = 1000;
+
+      while (true) {
+        // ALWAYS select all rows for export, disregarding resFilterStatus for export purposes
+        // unless they actively typed a search query
+        let q = supabase.from('alumni').select('*').range(from, from + limit - 1).order('id');
+        
+        if (resActiveSearch) {
+          q = q.or(`nama.ilike.%${resActiveSearch}%,nim.ilike.%${resActiveSearch}%`);
+        }
+        if (resActiveTahun) {
+          q = q.ilike('tahun_masuk', `%${resActiveTahun}%`);
+        }
+        
+        const { data, error } = await q;
+        if (error) throw error;
+        
+        if (!data || data.length === 0) break;
+        allData.push(...data);
+        from += limit;
       }
 
-      const { data, error } = await q.order('id');
-      if (error) throw error;
-      if (!data || data.length === 0) {
+      if (allData.length === 0) {
         showToast('Tidak ada data untuk di-export', 'warn');
         setIsExporting(false);
         return;
       }
+      
+      showToast(`Menyiapkan file CSV berisi ${allData.length} baris data...`, 'ok');
 
-      // Header kolom CSV
+      // Header kolom CSV sesuai format CSV asli
       const headers = [
-        'NIM', 'Nama', 'Tahun Masuk', 'Program Studi', 'Status', 'Confidence',
-        'Email', 'No HP', 'Tempat Bekerja', 'Alamat Bekerja', 'Posisi', 'Jabatan',
-        'Instansi', 'Jenis Pekerjaan', 'LinkedIn', 'Instagram', 'Facebook',
-        'TikTok', 'Website Tempat Kerja', 'Sumber Data', 'Tgl Update'
+        'Nama', 'NIM', 'Tahun Masuk', 'Tanggal Lulus', 'Fakultas', 'Program Studi', 
+        'Sosmed', 'Email', 'No Hp', 'Tempat Bekerja', 'Alamat Bekerja', 'Posisi', 
+        'Kategori (PNS/Swasta/Wirausaha)', 'Sosmed_Tempat_Bekerja', 
+        'Status Pelacakan', 'Confidence', 'Sumber Data', 'Tgl Update'
       ];
 
-      // Escape nilai agar aman jika mengandung koma/newline
       const escape = (val: any): string => {
         const str = val == null ? '' : String(val);
-        return str.includes(',') || str.includes('"') || str.includes('\n')
+        return str.includes(';') || str.includes('"') || str.includes('\n')
           ? `"${str.replace(/"/g, '""')}"`
           : str;
       };
 
-      const rows = data.map((d: any) => [
-        escape(d.nim),
-        escape(d.nama),
-        escape(d.tahun_masuk),
-        escape(d.program_studi),
-        escape(d.status),
-        escape(d.confidence),
-        escape(d.email),
-        escape(d.no_hp),
-        escape(d.tempat_bekerja),
-        escape(d.alamat_bekerja),
-        escape(d.posisi),
-        escape(d.jabatan),
-        escape(d.instansi),
-        escape(d.jenis_pekerjaan),
-        escape(d.sosmed_linkedin),
-        escape(d.sosmed_ig),
-        escape(d.sosmed_fb),
-        escape(d.sosmed_tiktok),
-        escape(d.sosmed_tempat_bekerja),
-        escape(Array.isArray(d.sources) ? d.sources.join('; ') : d.sources),
-        escape(d.updated_at ? new Date(d.updated_at).toISOString().split('T')[0] : '')
-      ].join(','));
+      const rows = allData.map((d: any) => {
+        const personalSosmed = d.sosmed_ig || d.sosmed_fb || d.sosmed_tiktok || (d.sosmed_linkedin && !d.sosmed_linkedin.includes('company') ? d.sosmed_linkedin : '') || '';
+        
+        return [
+          escape(d.nama),
+          escape(d.nim),
+          escape(d.tahun_masuk),
+          escape(d.tanggal_lulus),
+          escape(d.fakultas),
+          escape(d.program_studi),
+          escape(personalSosmed),
+          escape(d.email),
+          escape(d.no_hp),
+          escape(d.tempat_bekerja),
+          escape(d.alamat_bekerja),
+          escape(d.posisi),
+          escape(d.jenis_pekerjaan),
+          escape(d.sosmed_tempat_bekerja || (d.sosmed_linkedin && d.sosmed_linkedin.includes('company') ? d.sosmed_linkedin : '')),
+          escape(d.status),
+          escape(d.confidence),
+          escape(Array.isArray(d.sources) ? d.sources.join(', ') : d.sources),
+          escape(d.updated_at ? new Date(d.updated_at).toISOString().split('T')[0] : '')
+        ];
+      });
 
-      const csvContent = [headers.join(','), ...rows].join('\n');
-      // BOM agar Excel membaca encoding UTF-8 dengan benar
-      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const csvContent = "\uFEFF" + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Data_Alumni_${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Final Data RK(AutoRecovered) Hasil Pelacakan.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
-
-      showToast(`Export berhasil! (${data.length} data)`, 'ok');
+      showToast('Export berhasil!', 'ok');
     } catch (err) {
       console.error(err);
-      showToast('Gagal melakukan export', 'warn');
+      showToast('Gagal mengekspor data', 'warn');
+    } finally {
+      setIsExporting(false);
     }
-    setIsExporting(false);
-  };
+  };;
 
   // --- APP VIEW ---
   const pendingCount = alumni.filter(a => !a.optout && (searchNim ? true : (filterAlumni ? a.status === filterAlumni : a.status !== 'Teridentifikasi'))).length;
@@ -1083,7 +1093,7 @@ export default function Home() {
                   {pendingCount > 0 && <span style={{background:'var(--accent)', color:'#000', padding:'2px 6px', borderRadius:'4px', fontSize:'10px', marginLeft:'auto'}}>{pendingCount}</span>}
                 </button>
                 <button className={`nav-item ${page==='results'?'active':''}`} onClick={()=>setPage('results')}>📋 Hasil Identifikasi</button>
-                <button className={`nav-item ${page==='evidence'?'active':''}`} onClick={()=>setPage('evidence')}>🗂️ Jejak Bukti OSINT</button>
+                <button className={`nav-item hidden ${page==='evidence'?'active':''}`} style={{ display: 'none' }} onClick={()=>setPage('evidence')}>🗂️ Jejak Bukti OSINT</button>
 
                 <div className="nav-label">Configuration</div>
                 <button className={`nav-item ${page==='sources'?'active':''}`} onClick={()=>setPage('sources')}>🌐 Sumber Data Publik</button>
@@ -1386,6 +1396,7 @@ export default function Home() {
                         onChange={(e)=>{setResFilterStatus(e.target.value); setResPage(0);}}
                      >
                         <option value="">Semua (Teridentifikasi & Perlu Verif)</option>
+                        <option value="ALL">Export Seluruh Database (142.000+ Data)</option>
                         <option value="Teridentifikasi">Hanya Teridentifikasi</option>
                         <option value="Perlu Verifikasi">Hanya Perlu Verifikasi Manual</option>
                         <option value="Belum Dilacak">Belum Dilacak</option>
