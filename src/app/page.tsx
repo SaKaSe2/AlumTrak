@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import * as XLSX from 'xlsx';
+
 
 
 // Types
@@ -923,7 +923,7 @@ export default function Home() {
   }
 
   const [isExporting, setIsExporting] = useState(false);
-  const exportToExcel = async () => {
+  const exportToCSV = async () => {
     setIsExporting(true);
     showToast('Memulai export data, mohon tunggu...', 'ok');
     try {
@@ -939,7 +939,7 @@ export default function Home() {
       } else {
         q = q.in('status', ['Teridentifikasi', 'Perlu Verifikasi']);
       }
-      
+
       const { data, error } = await q.order('id');
       if (error) throw error;
       if (!data || data.length === 0) {
@@ -947,37 +947,60 @@ export default function Home() {
         setIsExporting(false);
         return;
       }
-      
-      const exportData = data.map((d: any) => ({
-        NIM: d.nim,
-        Nama: d.nama,
-        'Tahun Masuk': d.tahun_masuk,
-        'Program Studi': d.program_studi,
-        Status: d.status,
-        Confidence: d.confidence,
-        Email: d.email,
-        'No HP': d.no_hp,
-        'Tempat Bekerja': d.tempat_bekerja,
-        'Alamat Bekerja': d.alamat_bekerja,
-        Posisi: d.posisi,
-        Jabatan: d.jabatan,
-        Instansi: d.instansi,
-        'Jenis Pekerjaan': d.jenis_pekerjaan,
-        'LinkedIn': d.sosmed_linkedin,
-        'Instagram': d.sosmed_ig,
-        'Facebook': d.sosmed_fb,
-        'TikTok': d.sosmed_tiktok,
-        'Website Tempat Kerja': d.sosmed_tempat_bekerja,
-        'Sumber Data': Array.isArray(d.sources) ? d.sources.join(', ') : d.sources,
-        'Tgl Update': d.updated_at ? new Date(d.updated_at).toISOString().split('T')[0] : ''
-      }));
 
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Alumni");
-      XLSX.writeFile(workbook, `Data_Alumni_${new Date().toISOString().split('T')[0]}.xlsx`);
-      
-      showToast('Export berhasil!', 'ok');
+      // Header kolom CSV
+      const headers = [
+        'NIM', 'Nama', 'Tahun Masuk', 'Program Studi', 'Status', 'Confidence',
+        'Email', 'No HP', 'Tempat Bekerja', 'Alamat Bekerja', 'Posisi', 'Jabatan',
+        'Instansi', 'Jenis Pekerjaan', 'LinkedIn', 'Instagram', 'Facebook',
+        'TikTok', 'Website Tempat Kerja', 'Sumber Data', 'Tgl Update'
+      ];
+
+      // Escape nilai agar aman jika mengandung koma/newline
+      const escape = (val: any): string => {
+        const str = val == null ? '' : String(val);
+        return str.includes(',') || str.includes('"') || str.includes('\n')
+          ? `"${str.replace(/"/g, '""')}"`
+          : str;
+      };
+
+      const rows = data.map((d: any) => [
+        escape(d.nim),
+        escape(d.nama),
+        escape(d.tahun_masuk),
+        escape(d.program_studi),
+        escape(d.status),
+        escape(d.confidence),
+        escape(d.email),
+        escape(d.no_hp),
+        escape(d.tempat_bekerja),
+        escape(d.alamat_bekerja),
+        escape(d.posisi),
+        escape(d.jabatan),
+        escape(d.instansi),
+        escape(d.jenis_pekerjaan),
+        escape(d.sosmed_linkedin),
+        escape(d.sosmed_ig),
+        escape(d.sosmed_fb),
+        escape(d.sosmed_tiktok),
+        escape(d.sosmed_tempat_bekerja),
+        escape(Array.isArray(d.sources) ? d.sources.join('; ') : d.sources),
+        escape(d.updated_at ? new Date(d.updated_at).toISOString().split('T')[0] : '')
+      ].join(','));
+
+      const csvContent = [headers.join(','), ...rows].join('\n');
+      // BOM agar Excel membaca encoding UTF-8 dengan benar
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Data_Alumni_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showToast(`Export berhasil! (${data.length} data)`, 'ok');
     } catch (err) {
       console.error(err);
       showToast('Gagal melakukan export', 'warn');
@@ -1344,8 +1367,8 @@ export default function Home() {
                          onKeyDown={(e)=>{if(e.key==='Enter'){setResPage(0); setResActiveTahun(resSearchTahun); setResActiveSearch(resSearchString);}}}
                        />
                        <button className="btn btn-outline btn-sm" onClick={()=>{setResPage(0); setResActiveTahun(resSearchTahun); setResActiveSearch(resSearchString);}}>CARI</button>
-                       <button className="btn btn-outline btn-sm" onClick={exportToExcel} disabled={isExporting} style={{borderColor: 'var(--green)', color: 'var(--green)'}}>
-                         {isExporting ? 'EXPORTING...' : 'EXPORT XLSX'}
+                       <button className="btn btn-outline btn-sm" onClick={exportToCSV} disabled={isExporting} style={{borderColor: 'var(--green)', color: 'var(--green)'}}>
+                         {isExporting ? 'EXPORTING...' : 'EXPORT CSV'}
                        </button>
                      </div>
                    </div>
