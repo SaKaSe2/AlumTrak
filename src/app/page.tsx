@@ -301,10 +301,13 @@ export default function Home() {
   const [isTracking, setIsTracking] = useState(false);
   const stopRequested = useRef(false);
   const [trackingProgress, setTrackingProgress] = useState<{current: number, total: number, found: number, failed: number}>({current:0, total:0, found:0, failed:0});
-  const [consoleLog, setConsoleLog] = useState<{time:string, msg:string, cls:string}[]>([
-    {time: new Date().toLocaleTimeString(), msg: 'System ready. Awaiting command...', cls: 'c-sys'}
-  ]);
+  const [consoleLog, setConsoleLog] = useState<{time:string, msg:string, cls:string}[]>([]);
   const consoleRef = useRef<HTMLDivElement>(null);
+
+  // Inisialisasi console log setelah mount agar tidak terjadi hydration mismatch
+  useEffect(() => {
+    setConsoleLog([{time: new Date().toLocaleTimeString(), msg: 'System ready. Awaiting command...', cls: 'c-sys'}]);
+  }, []);
 
   const showToast = (msg: string, type: 'ok'|'warn' = 'ok') => {
     const id = Date.now();
