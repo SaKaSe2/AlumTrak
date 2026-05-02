@@ -874,6 +874,9 @@ export default function Home() {
     );
   };
 
+  // Export State (Dipindah ke sini agar tidak melanggar Rules of Hooks)
+  const [isExporting, setIsExporting] = useState(false);
+
   // Views rendering
   if(view === 'selection') {
     return (
@@ -925,7 +928,6 @@ export default function Home() {
     );
   }
 
-  const [isExporting, setIsExporting] = useState(false);
   const exportToCSV = async () => {
     setIsExporting(true);
     showToast('Memulai export data, mohon tunggu...', 'ok');
